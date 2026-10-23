@@ -28,26 +28,25 @@
     position: fixed;
     top: env(safe-area-inset-top, 0);
     left: 0; right: 0;
-    padding: 8px 12px;
+    padding: 6px 8px;
     display: flex;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
     pointer-events: none;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: bold;
-    letter-spacing: 1px;
   }
   #hud .panel {
-    background: rgba(0, 0, 0, 0.5);
+    flex: 1;
+    background: rgba(0, 0, 0, 0.55);
     border: 1px solid rgba(120, 160, 255, 0.4);
-    border-radius: 6px;
-    padding: 4px 10px;
+    border-radius: 5px;
+    padding: 3px 6px;
     text-align: center;
-    backdrop-filter: blur(4px);
   }
-  #hud .label { color: #6a8aba; font-size: 10px; }
-  #hud .value { color: #aaccff; font-size: 16px; text-shadow: 0 0 8px #4a7acc; }
-  #hud .value.gold { color: #ffd94a; text-shadow: 0 0 8px #fa0; }
+  #hud .label { color: #6a8aba; font-size: 9px; }
+  #hud .value { color: #aaccff; font-size: 14px; text-shadow: 0 0 6px #4a7acc; }
+  #hud .value.gold { color: #ffd94a; text-shadow: 0 0 6px #fa0; }
   #overlay {
     position: fixed;
     inset: 0;
@@ -55,34 +54,33 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 10, 0.85);
+    background: rgba(0, 0, 10, 0.88);
     text-align: center;
     padding: 20px;
     z-index: 10;
-    backdrop-filter: blur(3px);
   }
   #overlay.hidden { display: none; }
   #overlay h1 {
-    font-size: 40px;
+    font-size: 38px;
     color: #aaccff;
     text-shadow: 0 0 16px #4a7acc, 3px 3px 0 #000;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     letter-spacing: 4px;
   }
   #overlay .sub {
-    font-size: 14px;
+    font-size: 13px;
     color: #6a8aba;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
     line-height: 1.7;
   }
   #overlay .stats {
-    font-size: 18px;
-    margin-bottom: 20px;
+    font-size: 17px;
+    margin-bottom: 18px;
     line-height: 1.8;
   }
   #overlay .stats .val { color: #aaccff; }
   #overlay button {
-    padding: 14px 42px;
+    padding: 14px 44px;
     background: #1a2a5a;
     border: 2px solid #aaccff;
     color: #aaccff;
@@ -94,84 +92,58 @@
     letter-spacing: 2px;
     text-shadow: 0 0 8px #4a7acc;
     box-shadow: 0 0 20px rgba(100, 160, 255, 0.4), inset 0 0 20px rgba(100, 160, 255, 0.1);
-    transition: all 0.15s;
   }
   #overlay button:active { transform: scale(0.95); background: #2a3a7a; }
   #controls {
     position: fixed;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
     left: 0; right: 0;
     display: flex;
     justify-content: center;
-    gap: 8px;
-    padding: 0 10px;
+    gap: 6px;
+    padding: 0 8px;
     z-index: 5;
   }
   #controls.hidden { display: none; }
   .ctrl-btn {
     flex: 1;
-    max-width: 80px;
-    height: 64px;
-    background: rgba(20, 30, 60, 0.7);
+    max-width: 72px;
+    height: 60px;
+    background: rgba(20, 30, 60, 0.75);
     border: 2px solid rgba(120, 160, 255, 0.5);
     border-radius: 10px;
     color: #aaccff;
     font-family: inherit;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: bold;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(4px);
-    transition: all 0.1s;
+    transition: all 0.08s;
     touch-action: manipulation;
   }
   .ctrl-btn:active {
-    background: rgba(60, 100, 200, 0.8);
+    background: rgba(60, 100, 200, 0.85);
     transform: scale(0.92);
     border-color: #cce0ff;
     color: #fff;
   }
-  .ctrl-btn small { font-size: 10px; margin-top: 2px; }
-  #hint {
-    position: fixed;
-    bottom: 50%;
-    left: 0; right: 0;
-    text-align: center;
-    color: rgba(170, 204, 255, 0.6);
-    font-size: 12px;
-    pointer-events: none;
-    letter-spacing: 1px;
-    z-index: 5;
-    transition: opacity 0.5s;
-  }
-  #hint.hidden { opacity: 0; }
+  .ctrl-btn.small { font-size: 14px; }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="hud">
   <div class="panel"><div class="label">СЧЁТ</div><div class="value" id="score">0</div></div>
-  <div class="panel"><div class="label">УРОВЕНЬ</div><div class="value" id="level">1</div></div>
-  <div class="panel"><div class="label">ЛИНИИ</div><div class="value" id="lines">0</div></div>
-  <div class="panel"><div class="label">РЕКОРД</div><div class="value gold" id="best">0</div></div>
-</div>
-<div id="hint">Управление кнопками снизу или стрелками</div>
-<div id="controls" class="hidden">
-  <button class="ctrl-btn" id="btnLeft" aria-label="Влево">◀</button>
-  <button class="ctrl-btn" id="btnRotate" aria-label="Поворот">↻</button>
-  <button class="ctrl-btn" id="btnHold" aria-label="Hold" style="font-size:16px">HOLD</button>
-  <button class="ctrl-btn" id="btnRight" aria-label="Вправо">▶</button>
-  <button class="ctrl-btn" id="btnDown" aria-label="Вниз">▼</button>
-  <button class="ctrl-btn" id="btnDrop" aria-label="Сброс" style="font-size:16px">DROP</button>
+  <div class="panel"><div class="label">УР.</div><div class="value" id="level">1</div></div>
+  <div class="panel"><div class="label">ЛИН.</div><div class="value" id="lines">0</div></div>
+  <div class="panel"><div class="label">РЕК.</div><div class="value gold" id="best">0</div></div>
 </div>
 <div id="overlay">
   <h1>ТЕТРИС</h1>
   <div class="sub">
-    Кнопки снизу или стрелки на клавиатуре<br>
-    ← → влево/вправо · ↑ / Space — поворот<br>
-    ↓ — ускорить · H — HOLD · D — сбросить
+    Кнопки снизу или стрелки клавиатуры<br>
+    ← → · ↑ поворот · ↓ ускорить · H hold · Space drop
   </div>
   <div class="stats" id="stats" style="display:none">
     Счёт: <span class="val" id="finalScore">0</span><br>
@@ -179,6 +151,14 @@
     Рекорд: <span class="val" id="finalBest">0</span>
   </div>
   <button id="startBtn">ИГРАТЬ</button>
+</div>
+<div id="controls" class="hidden">
+  <button class="ctrl-btn" id="btnLeft">◀</button>
+  <button class="ctrl-btn" id="btnRotate">↻</button>
+  <button class="ctrl-btn small" id="btnHold">HOLD</button>
+  <button class="ctrl-btn" id="btnRight">▶</button>
+  <button class="ctrl-btn" id="btnDown">▼</button>
+  <button class="ctrl-btn small" id="btnDrop">DROP</button>
 </div>
 <script>
 (() => {
@@ -190,16 +170,13 @@
   const CFG = {
     COLS: 10,
     ROWS: 20,
-    fixedDt: 1 / 120,       // шаг аккумулятора (120 Гц физика)
-    maxFrameDt: 0.1,        // защита от больших пауз
-    // Скорости падения по уровням (секунд на клетку)
+    fixedDt: 1 / 120,
+    maxFrameDt: 0.1,
     fallSpeeds: [0.8, 0.7, 0.6, 0.5, 0.4, 0.33, 0.27, 0.22, 0.18, 0.15,
                  0.12, 0.10, 0.085, 0.07, 0.06],
-    softDropMultiplier: 20, // ускорение при удержании ▼
-    // Очки
-    lineScores: [0, 100, 300, 500, 800],  // за 0/1/2/3/4 линии
+    softDropMultiplier: 20,
+    lineScores: [0, 100, 300, 500, 800],
     linesPerLevel: 10,
-    // Цвета фигур
     colors: {
       I: '#4ae0e0', O: '#f4e04a', T: '#c84ae0',
       S: '#4ae04a', Z: '#e04a4a', J: '#4a6ae0', L: '#e0a84a'
@@ -213,10 +190,6 @@
     }
   };
 
-  // ============================================================
-  // ФИГУРЫ (тетромино)
-  // Каждая — массив поворотов, каждый поворот — матрица 4x4
-  // ============================================================
   const SHAPES = {
     I: [
       [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
@@ -267,36 +240,31 @@
   // ============================================================
   // СОСТОЯНИЕ
   // ============================================================
-  const STATE = { MENU: 0, PLAYING: 1, PAUSED: 2, DEAD: 3 };
+  const STATE = { MENU: 0, PLAYING: 1, DEAD: 3 };
   let state = STATE.MENU;
 
-  let board = [];               // ROWS x COLS, 0 или цвет
-  let current = null;           // { type, rot, x, y }
+  let board = [];
+  let current = null;
   let next = null;
-  let hold = null;              // тип фигуры или null
+  let hold = null;
   let canHold = true;
-  let bag = [];                 // 7-bag рандомайзер
+  let bag = [];
   let score = 0;
   let lines = 0;
   let level = 1;
   let best = parseInt(localStorage.getItem('tetris_best') || '0', 10);
   let fallTimer = 0;
   let softDrop = false;
-  let lineClearAnim = null;     // { rows: [], timer: 0 }
+  let lineClearAnim = null;
   let gameOverTimer = 0;
 
-  // Аккумулятор
   let accumulator = 0;
   let lastFrameTime = 0;
 
-  // Визуал
   let W = 0, H = 0, cellSize = 0, boardW = 0, boardH = 0, boardX = 0, boardY = 0;
   let sidePanelW = 0;
   let dpr = 1;
 
-  // ============================================================
-  // DOM
-  // ============================================================
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d', { alpha: false });
   const scoreEl = document.getElementById('score');
@@ -304,7 +272,6 @@
   const linesEl = document.getElementById('lines');
   const bestEl = document.getElementById('best');
   const overlay = document.getElementById('overlay');
-  const hint = document.getElementById('hint');
   const startBtn = document.getElementById('startBtn');
   const statsEl = document.getElementById('stats');
   const finalScoreEl = document.getElementById('finalScore');
@@ -327,10 +294,9 @@
     W = cssW;
     H = cssH;
 
-    // Резервируем место под HUD сверху и под контролы снизу
-    const marginTop = 70;
-    const marginBottom = 90;
-    const marginSide = 8;
+    const marginTop = 56;
+    const marginBottom = 80;
+    const marginSide = 6;
     const availW = W - marginSide * 2;
     const availH = H - marginTop - marginBottom;
     const aspect = CFG.COLS / CFG.ROWS;
@@ -344,18 +310,17 @@
     }
     cellSize = boardW / CFG.COLS;
 
-    // Боковая панель: рисуем next/hold справа от поля, если есть место
     const remainingW = W - boardW - marginSide * 2;
-    sidePanelW = Math.max(0, Math.min(80, remainingW - 10));
+    sidePanelW = Math.max(0, Math.min(90, remainingW - 6));
 
-    boardX = marginSide + (remainingW > 0 ? 0 : (availW - boardW) / 2);
+    boardX = (W - boardW - sidePanelW) / 2;
     boardY = marginTop + (availH - boardH) / 2;
   }
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', () => setTimeout(resize, 150));
 
   // ============================================================
-  // ЛОГИКА ТЕТРИСА
+  // ЛОГИКА
   // ============================================================
   function newBoard() {
     board = Array.from({ length: CFG.ROWS }, () => new Array(CFG.COLS).fill(0));
@@ -363,7 +328,6 @@
 
   function refillBag() {
     bag = [...SHAPE_KEYS];
-    // Перемешиваем
     for (let i = bag.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [bag[i], bag[j]] = [bag[j], bag[i]];
@@ -378,13 +342,7 @@
   function spawn() {
     const type = next ? next.type : getNextType();
     next = { type: getNextType() };
-    current = {
-      type,
-      rot: 0,
-      x: Math.floor((CFG.COLS - 4) / 2),
-      y: -1   // можно спавнить чуть выше — фигура появится сверху
-    };
-    // Если сразу при спавне — коллизия, значит game over
+    current = { type, rot: 0, x: Math.floor((CFG.COLS - 4) / 2), y: -1 };
     if (collides(current, 0, 0, current.rot)) {
       die();
       return false;
@@ -404,7 +362,7 @@
         const gy = ny + y;
         if (gx < 0 || gx >= CFG.COLS) return true;
         if (gy >= CFG.ROWS) return true;
-        if (gy < 0) continue; // над полем — можно
+        if (gy < 0) continue;
         if (board[gy][gx]) return true;
       }
     }
@@ -424,7 +382,6 @@
   function rotate() {
     if (!current || state !== STATE.PLAYING) return;
     const newRot = (current.rot + 1) % 4;
-    // Простые wall kicks: пробуем сдвинуть влево/вправо, если стенка
     const kicks = [0, -1, 1, -2, 2];
     for (const k of kicks) {
       if (!collides(current, k, 0, newRot)) {
@@ -457,25 +414,25 @@
       if (board[y].every(c => c !== 0)) full.push(y);
     }
     if (full.length === 0) {
-      // Спавн следующей фигуры
       if (!spawn()) return;
       return;
     }
-    // Анимация: сохраняем строки для очистки
     lineClearAnim = { rows: full, timer: 0 };
-    // Очки
     const points = CFG.lineScores[full.length] * level;
     score += points;
     lines += full.length;
     const newLevel = Math.floor(lines / CFG.linesPerLevel) + 1;
     if (newLevel > level) level = Math.min(newLevel, CFG.fallSpeeds.length);
-    if (score > best) best = score;
+    if (score > best) {
+      best = score;
+      localStorage.setItem('tetris_best', String(best));
+    }
     updateUI();
   }
 
   function applyLineClear() {
     if (!lineClearAnim) return;
-    const rows = lineClearAnim.rows.sort((a, b) => b - a); // сверху вниз
+    const rows = lineClearAnim.rows.sort((a, b) => b - a);
     for (const r of rows) {
       board.splice(r, 1);
       board.unshift(new Array(CFG.COLS).fill(0));
@@ -491,16 +448,9 @@
       current.y++;
       dropped++;
     }
-    score += dropped * 2; // бонус за hard drop
+    score += dropped * 2;
     lockPiece();
     updateUI();
-  }
-
-  function softDropStart() {
-    softDrop = true;
-  }
-  function softDropEnd() {
-    softDrop = false;
   }
 
   function holdPiece() {
@@ -508,8 +458,6 @@
     const savedType = current.type;
     if (hold === null) {
       hold = savedType;
-      current = null;
-      // Спавним следующую фигуру из next
       const type = next.type;
       next = { type: getNextType() };
       current = { type, rot: 0, x: Math.floor((CFG.COLS - 4) / 2), y: -1 };
@@ -519,7 +467,6 @@
       current = { type: swapped, rot: 0, x: Math.floor((CFG.COLS - 4) / 2), y: -1 };
     }
     canHold = false;
-    // Проверка коллизии при swap
     if (collides(current, 0, 0, current.rot)) {
       die();
     }
@@ -545,9 +492,6 @@
     gameOverTimer = 0;
   }
 
-  // ============================================================
-  // UI
-  // ============================================================
   function updateUI() {
     scoreEl.textContent = score;
     levelEl.textContent = level;
@@ -558,8 +502,6 @@
   function startGame() {
     overlay.classList.add('hidden');
     controls.classList.remove('hidden');
-    hint.classList.remove('hidden');
-    setTimeout(() => hint.classList.add('hidden'), 3000);
     newBoard();
     bag = [];
     refillBag();
@@ -594,7 +536,64 @@
   startBtn.addEventListener('click', startGame);
 
   // ============================================================
-  // ГЛАВНЫЙ ЦИКЛ — ФИКСИРОВАННЫЙ ШАГ
+  // УПРАВЛЕНИЕ
+  // ============================================================
+  document.getElementById('btnLeft').addEventListener('click', () => move(-1, 0));
+  document.getElementById('btnRight').addEventListener('click', () => move(1, 0));
+  document.getElementById('btnRotate').addEventListener('click', rotate);
+  document.getElementById('btnDrop').addEventListener('click', hardDrop);
+  document.getElementById('btnHold').addEventListener('click', holdPiece);
+  const btnDown = document.getElementById('btnDown');
+  btnDown.addEventListener('pointerdown', (e) => { e.preventDefault(); softDrop = true; });
+  btnDown.addEventListener('pointerup', () => softDrop = false);
+  btnDown.addEventListener('pointerleave', () => softDrop = false);
+  btnDown.addEventListener('pointercancel', () => softDrop = false);
+
+  window.addEventListener('keydown', (e) => {
+    if (state !== STATE.PLAYING) {
+      if ((e.code === 'Space' || e.code === 'Enter') && !overlay.classList.contains('hidden')) {
+        e.preventDefault();
+        startGame();
+      }
+      return;
+    }
+    switch (e.code) {
+      case 'ArrowLeft': case 'KeyA': e.preventDefault(); move(-1, 0); break;
+      case 'ArrowRight': case 'KeyD': e.preventDefault(); move(1, 0); break;
+      case 'ArrowDown': case 'KeyS': e.preventDefault(); if (!softDrop) { softDrop = true; } break;
+      case 'ArrowUp': case 'KeyW': case 'KeyX': e.preventDefault(); rotate(); break;
+      case 'Space': e.preventDefault(); hardDrop(); break;
+      case 'KeyH': e.preventDefault(); holdPiece(); break;
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') softDrop = false;
+  });
+
+  // Свайпы по полю
+  let tStartX = 0, tStartY = 0, tLastMoveX = 0, tActive = false;
+  canvas.addEventListener('pointerdown', (e) => {
+    tStartX = e.clientX; tStartY = e.clientY;
+    tLastMoveX = e.clientX;
+    tActive = true;
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!tActive || state !== STATE.PLAYING) return;
+    const dx = e.clientX - tLastMoveX;
+    if (Math.abs(dx) > 24) {
+      move(dx > 0 ? 1 : -1, 0);
+      tLastMoveX = e.clientX;
+    }
+    const dy = e.clientY - tStartY;
+    if (dy > 40 && Math.abs(e.clientX - tStartX) < 40) {
+      softDrop = true;
+    }
+  });
+  canvas.addEventListener('pointerup', () => { tActive = false; softDrop = false; });
+  canvas.addEventListener('pointercancel', () => { tActive = false; softDrop = false; });
+
+  // ============================================================
+  // ГЛАВНЫЙ ЦИКЛ
   // ============================================================
   function loop(now) {
     if (!lastFrameTime) lastFrameTime = now;
@@ -602,7 +601,6 @@
     lastFrameTime = now;
     if (frameDt > CFG.maxFrameDt) frameDt = CFG.maxFrameDt;
 
-    // Логика через аккумулятор (одинаково на 60 и 120 Гц)
     if (state === STATE.PLAYING) {
       accumulator += frameDt;
       while (accumulator >= CFG.fixedDt) {
@@ -616,7 +614,6 @@
       }
     }
 
-    // Анимация очистки линий
     if (lineClearAnim) {
       lineClearAnim.timer += frameDt;
       if (lineClearAnim.timer >= 0.25) {
@@ -629,13 +626,10 @@
   }
 
   function updateGame(dt) {
-    if (lineClearAnim) return; // пауза во время анимации
+    if (lineClearAnim) return;
     if (!current) return;
-
-    // Скорость падения текущего уровня
     const baseSpeed = CFG.fallSpeeds[Math.min(level - 1, CFG.fallSpeeds.length - 1)];
     const speed = softDrop ? baseSpeed / CFG.softDropMultiplier : baseSpeed;
-
     fallTimer += dt;
     if (fallTimer >= speed) {
       fallTimer -= speed;
@@ -647,29 +641,25 @@
   // РЕНДЕР
   // ============================================================
   function draw() {
-    // Фон
     ctx.fillStyle = CFG.palette.bg;
     ctx.fillRect(0, 0, W, H);
 
-    drawBoard();
-    drawNextAndHold();
+    drawBoardArea();
+    drawSidePanel();
 
-    if (state === STATE.DEAD && gameOverTimer > 0.5) {
-      // Красноватая вспышка
-      const a = Math.min(0.4, (gameOverTimer - 0.5) * 0.5);
+    if (state === STATE.DEAD && gameOverTimer > 0.4) {
+      const a = Math.min(0.35, (gameOverTimer - 0.4) * 0.5);
       ctx.fillStyle = `rgba(255, 60, 60, ${a})`;
       ctx.fillRect(0, 0, W, H);
     }
   }
 
-  function drawBoard() {
+  function drawBoardArea() {
     const p = CFG.palette;
-    // Рамка
     ctx.strokeStyle = p.border;
     ctx.lineWidth = 2;
     ctx.strokeRect(boardX - 1, boardY - 1, boardW + 2, boardH + 2);
 
-    // Сетка
     ctx.strokeStyle = p.grid;
     ctx.lineWidth = 0.5;
     ctx.beginPath();
@@ -685,45 +675,37 @@
     }
     ctx.stroke();
 
-    // Занятые клетки
     for (let y = 0; y < CFG.ROWS; y++) {
       for (let x = 0; x < CFG.COLS; x++) {
         if (board[y][x]) {
-          // Подсветка линии для очистки
           const isClearing = lineClearAnim && lineClearAnim.rows.includes(y);
           drawCell(x, y, CFG.colors[board[y][x]], isClearing);
         }
       }
     }
 
-    // Призрак текущей фигуры (куда упадёт)
     if (current && state === STATE.PLAYING && !lineClearAnim) {
       drawGhost();
-    }
-
-    // Текущая фигура
-    if (current && !lineClearAnim) {
+      drawPiece(current, CFG.colors[current.type]);
+    } else if (current && !lineClearAnim) {
       drawPiece(current, CFG.colors[current.type]);
     }
   }
 
   function drawGhost() {
-    // Находим позицию приземления
-    let ghostY = current.y;
-    while (!collides(current, 0, ghostY - current.y + 1, current.rot)) {
-      ghostY++;
-    }
-    if (ghostY === current.y) return; // не рисуем, если совпадает
+    let gy = current.y;
+    while (!collides(current, 0, gy - current.y + 1, current.rot)) gy++;
+    if (gy === current.y) return;
     const shape = SHAPES[current.type][current.rot];
     ctx.fillStyle = CFG.palette.ghost;
     for (let y = 0; y < 4; y++) {
       for (let x = 0; x < 4; x++) {
         if (!shape[y][x]) continue;
         const gx = current.x + x;
-        const gy = ghostY + y;
-        if (gy < 0 || gy >= CFG.ROWS) continue;
+        const yy = gy + y;
+        if (yy < 0 || yy >= CFG.ROWS) continue;
         const px = boardX + gx * cellSize;
-        const py = boardY + gy * cellSize;
+        const py = boardY + yy * cellSize;
         ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
       }
     }
@@ -749,11 +731,9 @@
     const pad = 1;
     const size = cellSize - pad * 2;
 
-    // Тело
     ctx.fillStyle = clearing ? CFG.palette.flash : color;
     ctx.fillRect(px + pad, py + pad, size, size);
 
-    // Внутренний градиент (светлый верх-лево, тёмный низ-право)
     const grad = ctx.createLinearGradient(px, py, px + cellSize, py + cellSize);
     grad.addColorStop(0, 'rgba(255,255,255,0.35)');
     grad.addColorStop(0.5, 'rgba(255,255,255,0)');
@@ -761,31 +741,59 @@
     ctx.fillStyle = grad;
     ctx.fillRect(px + pad, py + pad, size, size);
 
-    // Обводка
     ctx.strokeStyle = 'rgba(0,0,0,0.5)';
     ctx.lineWidth = 1;
     ctx.strokeRect(px + pad + 0.5, py + pad + 0.5, size - 1, size - 1);
-
-    // Блик
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.fillRect(px + pad + 2, py + pad + 2, size - 4, 2);
   }
 
-  function drawNextAndHold() {
-    if (sidePanelW < 40) return; // слишком узко — не показываем
+  function drawSidePanel() {
+    if (sidePanelW < 30) return;
+    const panelX = boardX + boardW + 8;
+    const miniCell = Math.min(14, sidePanelW / 4 - 2);
 
-    const panelX = boardX + boardW + 10;
-    const miniCell = Math.min(16, sidePanelW / 4 - 2);
-
-    // NEXT
     drawMiniLabel(panelX, boardY, 'NEXT');
-    drawMiniPiece(next ? next.type : null, panelX, boardY + 18, miniCell);
+    drawMiniPiece(next ? next.type : null, panelX, boardY + 16, miniCell);
 
-    // HOLD
-    const holdY = boardY + 90;
+    const holdY = boardY + 88;
     drawMiniLabel(panelX, holdY, 'HOLD');
-    drawMiniPiece(hold, panelX, holdY + 18, miniCell, !canHold);
+    drawMiniPiece(hold, panelX, holdY + 16, miniCell, !canHold);
   }
 
   function drawMiniLabel(x, y, text) {
-    ctx
+    ctx.fillStyle = '#6a8aba';
+    ctx.font = 'bold 11px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(text, x, y);
+  }
+
+  function drawMiniPiece(type, x, y, cell, dim) {
+    if (!type) return;
+    const shape = SHAPES[type][0];
+    const color = CFG.colors[type];
+    ctx.globalAlpha = dim ? 0.4 : 1;
+    for (let yy = 0; yy < 4; yy++) {
+      for (let xx = 0; xx < 4; xx++) {
+        if (!shape[yy][xx]) continue;
+        const px = x + xx * cell;
+        const py = y + yy * cell;
+        ctx.fillStyle = color;
+        ctx.fillRect(px, py, cell - 1, cell - 1);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fillRect(px, py, cell - 1, 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px + 0.5, py + 0.5, cell - 2, cell - 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ============================================================
+  // СТАРТ
+  // ============================================================
+  resize();
+  updateUI();
+  requestAnimationFrame(loop);
+})();
+</
