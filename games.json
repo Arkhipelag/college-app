@@ -4,5 +4,10 @@
     "id": "flappy",
     "title": "Flappy Bird",
     "url": "https://Arkhipelag.github.io/college-app/games/flappy/index.html"
+  },
+  {
+    "id": "snake",
+    "title": "Змейка",
+    "url": "https://Arkhipelag.github.io/college-app/games/snake/index.html"
   }
 ]
