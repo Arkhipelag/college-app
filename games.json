@@ -9,5 +9,10 @@
     "id": "snake",
     "title": "Змейка",
     "url": "https://Arkhipelag.github.io/college-app/games/snake/index.html"
+  },
+  {
+    "id": "tetris",
+    "title": "Тетрис",
+    "url": "https://Arkhipelag.github.io/college-app/games/tetris/index.html"
   }
 ]
