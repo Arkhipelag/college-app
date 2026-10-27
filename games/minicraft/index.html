@@ -1,0 +1,3141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>VoxelCraft 3D - Voxel Sandbox World</title>
+  <meta name="description" content="Full-featured 3D voxel sandbox game engine with procedural world generation, chunk meshing, AABB physics, block building, day-night cycle, and mobile landscape controls." />
+  <meta property="og:title" content="VoxelCraft 3D - Voxel Sandbox World" />
+  <meta property="og:description" content="Full-featured 3D voxel sandbox game engine with procedural world generation, chunk meshing, AABB physics, block building, day-night cycle, and mobile landscape controls." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- CDN Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0c1024;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      color: #fff;
+    }
+
+    #game-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    canvas#webgl-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Crosshair */
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 18px;
+      height: 18px;
+      pointer-events: none;
+      z-index: 20;
+    }
+    #crosshair::before, #crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 0 2px rgba(0,0,0,0.8);
+    }
+    #crosshair::before {
+      top: 8px;
+      left: 0;
+      width: 18px;
+      height: 2px;
+    }
+    #crosshair::after {
+      top: 0;
+      left: 8px;
+      width: 2px;
+      height: 18px;
+    }
+
+    /* HUD Top Bar */
+    #hud-top {
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 30;
+      pointer-events: none;
+    }
+
+    .hud-card {
+      background: rgba(18, 22, 36, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      line-height: 1.4;
+      backdrop-filter: blur(4px);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+      pointer-events: auto;
+    }
+
+    .badge-tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-left: 4px;
+    }
+    .badge-survival { background: #27ae60; color: #fff; }
+    .badge-creative { background: #e67e22; color: #fff; }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .btn-icon {
+      background: rgba(18, 22, 36, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      touch-action: manipulation;
+    }
+    .btn-icon:hover, .btn-icon:active {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.05);
+    }
+
+    /* Target Block Info (center top) */
+    #target-info {
+      position: absolute;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(12, 16, 28, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 3px 14px;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      z-index: 25;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    }
+
+    /* Hotbar - Bottom Center */
+    #hotbar-container {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 30;
+      pointer-events: auto;
+    }
+
+    #active-block-name {
+      font-size: 13px;
+      font-weight: 600;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6);
+      color: #f1f2f6;
+      background: rgba(0, 0, 0, 0.45);
+      padding: 2px 10px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    #hotbar {
+      display: flex;
+      gap: 4px;
+      background: rgba(18, 22, 34, 0.85);
+      border: 2px solid rgba(80, 85, 105, 0.8);
+      border-radius: 8px;
+      padding: 4px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+    }
+
+    .hotbar-slot {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      background: rgba(35, 40, 58, 0.9);
+      border: 2px solid rgba(60, 66, 88, 0.9);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+
+    .hotbar-slot.active {
+      border-color: #ffd32a;
+      box-shadow: 0 0 10px rgba(255, 211, 42, 0.65), inset 0 0 6px rgba(255, 211, 42, 0.4);
+      transform: translateY(-2px);
+      background: rgba(50, 60, 90, 0.95);
+    }
+
+    .slot-key {
+      position: absolute;
+      top: 1px;
+      left: 3px;
+      font-size: 9px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.6);
+      pointer-events: none;
+    }
+
+    .slot-icon {
+      width: 28px;
+      height: 28px;
+      image-rendering: pixelated;
+      pointer-events: none;
+    }
+
+    .slot-count {
+      position: absolute;
+      bottom: 1px;
+      right: 3px;
+      font-size: 10px;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 1px 1px 0 #000, -1px -1px 0 #000;
+      pointer-events: none;
+    }
+
+    /* Mobile Controls (Horizontal Landscape Layout) */
+    #mobile-controls {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 25;
+      display: block;
+    }
+
+    /* Left Joystick Zone */
+    #joystick-zone {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 130px;
+      height: 130px;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    #joystick-base {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(20,24,38,0.6) 70%);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      top: 5px;
+      left: 5px;
+    }
+
+    #joystick-knob {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #54a0ff 0%, #2e86de 100%);
+      border: 2px solid #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      top: 40px;
+      left: 40px;
+      pointer-events: none;
+      transform: translate(0, 0);
+      transition: transform 0.05s ease-out;
+    }
+
+    /* Right Touch Look Zone */
+    #look-touch-zone {
+      position: absolute;
+      top: 60px;
+      right: 0;
+      width: 55%;
+      height: calc(100% - 150px);
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    /* Mobile Action Buttons (Right cluster) */
+    #mobile-buttons-cluster {
+      position: absolute;
+      bottom: 16px;
+      right: 18px;
+      display: grid;
+      grid-template-columns: repeat(3, 50px);
+      grid-template-rows: repeat(2, 50px);
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .action-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      color: #fff;
+      font-weight: bold;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      transition: transform 0.1s ease, background 0.15s ease;
+      touch-action: manipulation;
+    }
+    .action-btn:active {
+      transform: scale(0.92);
+    }
+    .action-btn span.label {
+      font-size: 8px;
+      text-transform: uppercase;
+      margin-top: 1px;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-break {
+      background: linear-gradient(135deg, #ee5253, #c0392b);
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .btn-place {
+      background: linear-gradient(135deg, #10ac84, #1dd1a1);
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .btn-jump {
+      background: linear-gradient(135deg, #2e86de, #54a0ff);
+      grid-column: 3;
+      grid-row: 2;
+    }
+    .btn-fly {
+      background: linear-gradient(135deg, #9b59b6, #8e44ad);
+      grid-column: 2;
+      grid-row: 2;
+    }
+    .btn-sprint {
+      background: linear-gradient(135deg, #f39c12, #e67e22);
+      grid-column: 1;
+      grid-row: 2;
+    }
+    .btn-inventory-touch {
+      background: linear-gradient(135deg, #34495e, #2c3e50);
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    /* Start / Pause Overlay */
+    #blocker {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 14, 26, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .menu-title {
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #2ed573, #1e90ff, #ffa502);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .menu-sub {
+      font-size: 14px;
+      color: #a4b0be;
+      margin-bottom: 24px;
+      max-width: 540px;
+    }
+
+    .btn-start {
+      background: linear-gradient(135deg, #2ed573, #10ac84);
+      color: #fff;
+      border: none;
+      padding: 12px 36px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(46, 213, 115, 0.4);
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+    }
+    .btn-start:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 26px rgba(46, 213, 115, 0.6);
+    }
+
+    .controls-hint-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px 24px;
+      text-align: left;
+      margin-top: 24px;
+      font-size: 12px;
+      color: #ced6e0;
+      max-width: 580px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .hint-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .kbd {
+      background: #2f3542;
+      border: 1px solid #747d8c;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-family: monospace;
+      color: #ffd32a;
+    }
+
+    /* Inventory Modal */
+    #inventory-modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(540px, 92vw);
+      max-height: 86vh;
+      background: rgba(18, 22, 38, 0.95);
+      border: 2px solid #57606f;
+      border-radius: 12px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+      z-index: 120;
+      display: none;
+      flex-direction: column;
+      padding: 16px;
+      backdrop-filter: blur(10px);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #ffd32a;
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: #a4b0be;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+      gap: 8px;
+      overflow-y: auto;
+      max-height: 52vh;
+      padding: 4px;
+    }
+
+    .inventory-item {
+      width: 48px;
+      height: 48px;
+      background: rgba(35, 40, 58, 0.9);
+      border: 2px solid rgba(80, 85, 105, 0.8);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.12s ease;
+    }
+    .inventory-item:hover, .inventory-item:active {
+      border-color: #ffd32a;
+      background: rgba(50, 60, 90, 0.95);
+      transform: scale(1.08);
+    }
+    .inventory-item-icon {
+      width: 32px;
+      height: 32px;
+      image-rendering: pixelated;
+    }
+    .inventory-item-name {
+      position: absolute;
+      bottom: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #000;
+      color: #fff;
+      font-size: 9px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      white-space: nowrap;
+      display: none;
+      z-index: 10;
+    }
+    .inventory-item:hover .inventory-item-name {
+      display: block;
+    }
+
+    /* Settings Modal */
+    #settings-modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(440px, 90vw);
+      background: rgba(18, 22, 38, 0.96);
+      border: 2px solid #57606f;
+      border-radius: 12px;
+      padding: 18px;
+      z-index: 120;
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
+    }
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    .setting-row input[type="range"] {
+      width: 140px;
+    }
+    .btn-secondary {
+      background: #2f3542;
+      border: 1px solid #57606f;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .btn-secondary:active {
+      background: #57606f;
+    }
+
+    /* Portrait Mode Warning Overlay */
+    #rotate-device-prompt {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #0d1117;
+      z-index: 9999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px;
+    }
+
+    .rotate-icon {
+      font-size: 54px;
+      margin-bottom: 16px;
+      animation: rotatePhone 2.5s infinite ease-in-out;
+    }
+
+    @keyframes rotatePhone {
+      0%, 20% { transform: rotate(0deg); }
+      50%, 70% { transform: rotate(-90deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    .rotate-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #ffd32a;
+      margin-bottom: 8px;
+    }
+    .rotate-text {
+      font-size: 14px;
+      color: #a4b0be;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    /* Check portrait orientation */
+    @media (orientation: portrait) and (max-width: 768px) {
+      #rotate-device-prompt {
+        display: flex;
+      }
+    }
+
+    /* Break progress indicator */
+    #mining-indicator {
+      position: absolute;
+      top: 54%;
+      left: 50%;
+      transform: translate(-50%, 0);
+      width: 40px;
+      height: 6px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 4px;
+      overflow: hidden;
+      display: none;
+      z-index: 21;
+    }
+    #mining-progress {
+      width: 0%;
+      height: 100%;
+      background: #ff4757;
+      transition: width 0.05s linear;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WebGL Render Viewport -->
+  <div id="game-container">
+    <canvas id="webgl-canvas"></canvas>
+  </div>
+
+  <!-- HUD Crosshair & Target info -->
+  <div id="crosshair"></div>
+  <div id="mining-indicator">
+    <div id="mining-progress"></div>
+  </div>
+  <div id="target-info">Блок: Трава [X:0, Y:0, Z:0]</div>
+
+  <!-- Top Info HUD -->
+  <div id="hud-top">
+    <div class="hud-card" id="stats-card">
+      <div><strong>VoxelCraft 3D</strong> <span class="badge-tag badge-survival" id="mode-badge">Выживание</span></div>
+      <div id="coords-text">XYZ: 0.0, 32.0, 0.0</div>
+      <div id="fps-biome-text">FPS: 60 | Биом: Равнины | Чанки: 0</div>
+    </div>
+
+    <div class="top-actions">
+      <button class="btn-icon" id="btn-fullscreen" title="На весь экран">⛶</button>
+      <button class="btn-icon" id="btn-sound" title="Звук">🔊</button>
+      <button class="btn-icon" id="btn-time" title="Время суток (День/Ночь)">☀️</button>
+      <button class="btn-icon" id="btn-settings" title="Настройки">⚙️</button>
+      <button class="btn-icon" id="btn-inventory-top" title="Инвентарь (E)">🎒</button>
+    </div>
+  </div>
+
+  <!-- Hotbar - 9 Slots (Horizontal Bottom Center) -->
+  <div id="hotbar-container">
+    <div id="active-block-name">Трава</div>
+    <div id="hotbar">
+      <!-- 9 slots populated dynamically by JS -->
+    </div>
+  </div>
+
+  <!-- Mobile Landscape Controls -->
+  <div id="mobile-controls">
+    <!-- Virtual Movement Joystick on Left -->
+    <div id="joystick-zone">
+      <div id="joystick-base">
+        <div id="joystick-knob"></div>
+      </div>
+    </div>
+
+    <!-- Drag Look Zone on Right -->
+    <div id="look-touch-zone"></div>
+
+    <!-- Mobile Action Buttons on Right -->
+    <div id="mobile-buttons-cluster">
+      <div class="action-btn btn-break" id="touch-btn-break">
+        ⛏️
+        <span class="label">Ломать</span>
+      </div>
+      <div class="action-btn btn-place" id="touch-btn-place">
+        🧱
+        <span class="label">Ставить</span>
+      </div>
+      <div class="action-btn btn-inventory-touch" id="touch-btn-inv">
+        🎒
+        <span class="label">Вещи</span>
+      </div>
+      <div class="action-btn btn-sprint" id="touch-btn-sprint">
+        🏃
+        <span class="label">Бег</span>
+      </div>
+      <div class="action-btn btn-fly" id="touch-btn-fly">
+        🕊️
+        <span class="label">Полет</span>
+      </div>
+      <div class="action-btn btn-jump" id="touch-btn-jump">
+        🦘
+        <span class="label">Прыжок</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Blocker / Start Screen -->
+  <div id="blocker">
+    <h1 class="menu-title">VoxelCraft 3D</h1>
+    <p class="menu-sub">Полноценная 3D воксельная песочница с процедурной генерацией, пещерами, физикой AABB, динамическим освещением и строительством.</p>
+    <button class="btn-start" id="btn-play">ИГРАТЬ СЕЙЧАС</button>
+
+    <div class="controls-hint-grid">
+      <div class="hint-item"><span class="kbd">W A S D</span> Передвижение / Бег</div>
+      <div class="hint-item"><span class="kbd">ПРОБЕЛ</span> Прыжок / Взлет</div>
+      <div class="hint-item"><span class="kbd">ЛКМ</span> Разрушить блок</div>
+      <div class="hint-item"><span class="kbd">ПКМ</span> Поставить блок</div>
+      <div class="hint-item"><span class="kbd">1 - 9 / Колесо</span> Выбор блока</div>
+      <div class="hint-item"><span class="kbd">E</span> Открыть весь инвентарь</div>
+      <div class="hint-item"><span class="kbd">F</span> Режим полета (Creative)</div>
+      <div class="hint-item"><span class="kbd">📱 Сенсор</span> Джойстик слева, обзор справа</div>
+    </div>
+  </div>
+
+  <!-- Inventory Drawer Modal -->
+  <div id="inventory-modal">
+    <div class="modal-header">
+      <div class="modal-title">Инвентарь и Блоки</div>
+      <button class="modal-close" id="modal-close-inv">&times;</button>
+    </div>
+    <div style="font-size:11px; color:#a4b0be; margin-bottom:8px;">Нажмите на любой блок, чтобы поместить его в активный слот хотбара:</div>
+    <div class="inventory-grid" id="inventory-items-container">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal">
+    <div class="modal-header">
+      <div class="modal-title">Настройки игры</div>
+      <button class="modal-close" id="modal-close-settings">&times;</button>
+    </div>
+    <div class="setting-row">
+      <span>Дальность прорисовки (Чанки):</span>
+      <input type="range" id="setting-render-dist" min="2" max="6" step="1" value="3">
+      <span id="val-render-dist">3</span>
+    </div>
+    <div class="setting-row">
+      <span>Время суток:</span>
+      <input type="range" id="setting-time" min="0" max="24" step="0.5" value="10">
+      <span id="val-time">10:00</span>
+    </div>
+    <div class="setting-row">
+      <span>Скорость дня/ночи:</span>
+      <input type="range" id="setting-day-speed" min="0" max="5" step="0.2" value="1">
+      <span id="val-day-speed">1x</span>
+    </div>
+    <div class="setting-row">
+      <span>Режим полета (Fly Mode):</span>
+      <button class="btn-secondary" id="btn-toggle-fly-setting">Выключен</button>
+    </div>
+    <div class="setting-row">
+      <span>Генерация нового мира:</span>
+      <button class="btn-secondary" id="btn-new-world" style="background:#e74c3c;">Сгенерировать сид</button>
+    </div>
+  </div>
+
+  <!-- Device Rotation Advisory for Mobile Phones -->
+  <div id="rotate-device-prompt">
+    <div class="rotate-icon">📱 ➔ 📲</div>
+    <div class="rotate-title">Поверните устройство</div>
+    <div class="rotate-text">Для максимально удобного управления и широкого обзора игра разработана под горизонтальный формат (Landscape). Пожалуйста, поверните ваш телефон.</div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- GAME ENGINE: 100% SELF-CONTAINED JAVASCRIPT VOXEL ENGINE  -->
+  <!-- ========================================================= -->
+  <script>
+    /*
+     * VoxelCraft 3D Engine
+     * Complete procedural voxel sandbox with chunk meshing, AABB physics,
+     * ambient occlusion, dynamic day-night cycle, sound synthesis, and mobile controls.
+     */
+
+    // --- 1. PROCEDURAL SIMPLEX / PERLIN NOISE IMPLEMENTATION ---
+    class SimplexNoise {
+      constructor(seed = Math.random() * 65536) {
+        this.p = new Uint8Array(256);
+        for (let i = 0; i < 256; i++) this.p[i] = i;
+        // Fisher-Yates shuffle with seed
+        let s = seed % 2147483647;
+        if (s <= 0) s += 2147483646;
+        for (let i = 255; i > 0; i--) {
+          s = (s * 16807) % 2147483647;
+          const j = s % (i + 1);
+          const tmp = this.p[i];
+          this.p[i] = this.p[j];
+          this.p[j] = tmp;
+        }
+        this.perm = new Uint8Array(512);
+        this.permMod12 = new Uint8Array(512);
+        for (let i = 0; i < 512; i++) {
+          this.perm[i] = this.p[i & 255];
+          this.permMod12[i] = this.perm[i] % 12;
+        }
+        this.G3 = 1.0 / 6.0;
+        this.F3 = 1.0 / 3.0;
+        this.grad3 = [
+          1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0,
+          1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1,
+          0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1
+        ];
+      }
+
+      noise2D(xin, yin) {
+        let n0 = 0, n1 = 0, n2 = 0;
+        const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
+        const s = (xin + yin) * F2;
+        const i = Math.floor(xin + s);
+        const j = Math.floor(yin + s);
+        const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
+        const t = (i + j) * G2;
+        const X0 = i - t;
+        const Y0 = j - t;
+        const x0 = xin - X0;
+        const y0 = yin - Y0;
+        let i1, j1;
+        if (x0 > y0) { i1 = 1; j1 = 0; } else { i1 = 0; j1 = 1; }
+        const x1 = x0 - i1 + G2;
+        const y1 = y0 - j1 + G2;
+        const x2 = x0 - 1.0 + 2.0 * G2;
+        const y2 = y0 - 1.0 + 2.0 * G2;
+        const ii = i & 255;
+        const jj = j & 255;
+        const gi0 = this.permMod12[ii + this.perm[jj]];
+        const gi1 = this.permMod12[ii + i1 + this.perm[jj + j1]];
+        const gi2 = this.permMod12[ii + 1 + this.perm[jj + 1]];
+        let t0 = 0.5 - x0 * x0 - y0 * y0;
+        if (t0 >= 0) {
+          t0 *= t0;
+          n0 = t0 * t0 * (this.grad3[gi0 * 3] * x0 + this.grad3[gi0 * 3 + 1] * y0);
+        }
+        let t1 = 0.5 - x1 * x1 - y1 * y1;
+        if (t1 >= 0) {
+          t1 *= t1;
+          n1 = t1 * t1 * (this.grad3[gi1 * 3] * x1 + this.grad3[gi1 * 3 + 1] * y1);
+        }
+        let t2 = 0.5 - x2 * x2 - y2 * y2;
+        if (t2 >= 0) {
+          t2 *= t2;
+          n2 = t2 * t2 * (this.grad3[gi2 * 3] * x2 + this.grad3[gi2 * 3 + 1] * y2);
+        }
+        return 70.0 * (n0 + n1 + n2);
+      }
+
+      noise3D(xin, yin, zin) {
+        let n0 = 0, n1 = 0, n2 = 0, n3 = 0;
+        const s = (xin + yin + zin) * this.F3;
+        const i = Math.floor(xin + s);
+        const j = Math.floor(yin + s);
+        const k = Math.floor(zin + s);
+        const t = (i + j + k) * this.G3;
+        const X0 = i - t;
+        const Y0 = j - t;
+        const Z0 = k - t;
+        const x0 = xin - X0;
+        const y0 = yin - Y0;
+        const z0 = zin - Z0;
+        let i1, j1, k1, i2, j2, k2;
+        if (x0 >= y0) {
+          if (y0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+          else if (x0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 0; k2 = 1; }
+          else { i1 = 0; j1 = 0; k1 = 1; i2 = 1; j2 = 0; k2 = 1; }
+        } else {
+          if (y0 < z0) { i1 = 0; j1 = 0; k1 = 1; i2 = 0; j2 = 1; k2 = 1; }
+          else if (x0 < z0) { i1 = 0; j1 = 1; k1 = 0; i2 = 0; j2 = 1; k2 = 1; }
+          else { i1 = 0; j1 = 1; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+        }
+        const x1 = x0 - i1 + this.G3;
+        const y1 = y0 - j1 + this.G3;
+        const z1 = z0 - k1 + this.G3;
+        const x2 = x0 - i2 + 2.0 * this.G3;
+        const y2 = y0 - j2 + 2.0 * this.G3;
+        const z2 = z0 - k2 + 2.0 * this.G3;
+        const x3 = x0 - 1.0 + 3.0 * this.G3;
+        const y3 = y0 - 1.0 + 3.0 * this.G3;
+        const z3 = z0 - 1.0 + 3.0 * this.G3;
+        const ii = i & 255;
+        const jj = j & 255;
+        const kk = k & 255;
+        const gi0 = this.permMod12[ii + this.perm[jj + this.perm[kk]]];
+        const gi1 = this.permMod12[ii + i1 + this.perm[jj + j1 + this.perm[kk + k1]]];
+        const gi2 = this.permMod12[ii + i2 + this.perm[jj + j2 + this.perm[kk + k2]]];
+        const gi3 = this.permMod12[ii + 1 + this.perm[jj + 1 + this.perm[kk + 1]]];
+        let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
+        if (t0 >= 0) {
+          t0 *= t0;
+          n0 = t0 * t0 * (this.grad3[gi0 * 3] * x0 + this.grad3[gi0 * 3 + 1] * y0 + this.grad3[gi0 * 3 + 2] * z0);
+        }
+        let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
+        if (t1 >= 0) {
+          t1 *= t1;
+          n1 = t1 * t1 * (this.grad3[gi1 * 3] * x1 + this.grad3[gi1 * 3 + 1] * y1 + this.grad3[gi1 * 3 + 2] * z1);
+        }
+        let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
+        if (t2 >= 0) {
+          t2 *= t2;
+          n2 = t2 * t2 * (this.grad3[gi2 * 3] * x2 + this.grad3[gi2 * 3 + 1] * y2 + this.grad3[gi2 * 3 + 2] * z2);
+        }
+        let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
+        if (t3 >= 0) {
+          t3 *= t3;
+          n3 = t3 * t3 * (this.grad3[gi3 * 3] * x3 + this.grad3[gi3 * 3 + 1] * y3 + this.grad3[gi3 * 3 + 2] * z3);
+        }
+        return 32.0 * (n0 + n1 + n2 + n3);
+      }
+
+      fBm2D(x, y, octaves = 4, lacunarity = 2.0, gain = 0.5) {
+        let total = 0;
+        let frequency = 1.0;
+        let amplitude = 1.0;
+        let maxVal = 0;
+        for (let i = 0; i < octaves; i++) {
+          total += this.noise2D(x * frequency, y * frequency) * amplitude;
+          maxVal += amplitude;
+          frequency *= lacunarity;
+          amplitude *= gain;
+        }
+        return total / maxVal;
+      }
+    }
+
+    // --- 2. PROCEDURAL SOUND SYNTHESIZER (WEB AUDIO API) ---
+    class AudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.masterGain = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.gain.value = 0.45;
+            this.masterGain.connect(this.ctx.destination);
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playBreak(blockId) {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        // Pitch variation
+        const baseFreq = blockId === 1 ? 90 : (blockId === 4 ? 140 : 180);
+        osc.frequency.setValueAtTime(baseFreq + (Math.random() * 40 - 20), now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.12);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, now);
+        filter.frequency.linearRampToValueAtTime(100, now + 0.12);
+
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now);
+        osc.stop(now + 0.13);
+
+        // Noise click
+        this.playNoiseBurst(0.04, 0.4);
+      }
+
+      playPlace(blockId) {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        const baseFreq = blockId === 1 ? 160 : (blockId === 4 ? 220 : 280);
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+
+        gain.gain.setValueAtTime(0.6, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now);
+        osc.stop(now + 0.09);
+      }
+
+      playFootstep() {
+        if (this.muted || !this.ctx) return;
+        this.playNoiseBurst(0.035, 0.25, 400);
+      }
+
+      playJump() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(320, now + 0.15);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now);
+        osc.stop(now + 0.16);
+      }
+
+      playNoiseBurst(duration = 0.05, vol = 0.3, lowpass = 1000) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const bufferSize = this.ctx.sampleRate * duration;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(lowpass, now);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        noise.start(now);
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        if (this.masterGain) {
+          this.masterGain.gain.value = this.muted ? 0.0 : 0.45;
+        }
+        return this.muted;
+      }
+    }
+
+    // --- 3. BLOCK REGISTRY & TEXTURE ATLAS GENERATOR ---
+    const BLOCKS = {
+      AIR: 0,
+      STONE: 1,
+      DIRT: 2,
+      GRASS: 3,
+      WOOD: 4,
+      LEAVES: 5,
+      PLANKS: 6,
+      COBBLESTONE: 7,
+      BEDROCK: 8,
+      SAND: 9,
+      GLASS: 10,
+      WATER: 11,
+      BRICK: 12,
+      COAL_ORE: 13,
+      IRON_ORE: 14,
+      GOLD_ORE: 15,
+      DIAMOND_ORE: 16,
+      TNT: 17,
+      BOOKSHELF: 18,
+      GLOWSTONE: 19
+    };
+
+    const BLOCK_DEFS = {
+      0: { name: 'Воздух', transparent: true, solid: false },
+      1: { name: 'Камень', tiles: { top: 0, bottom: 0, side: 0 }, sound: 'stone' },
+      2: { name: 'Земля', tiles: { top: 1, bottom: 1, side: 1 }, sound: 'dirt' },
+      3: { name: 'Трава', tiles: { top: 2, bottom: 1, side: 3 }, sound: 'grass' },
+      4: { name: 'Древесина дуба', tiles: { top: 5, bottom: 5, side: 4 }, sound: 'wood' },
+      5: { name: 'Листва', tiles: { top: 6, bottom: 6, side: 6 }, transparent: true, opacity: 0.9, sound: 'leaves' },
+      6: { name: 'Доски', tiles: { top: 7, bottom: 7, side: 7 }, sound: 'wood' },
+      7: { name: 'Булыжник', tiles: { top: 8, bottom: 8, side: 8 }, sound: 'stone' },
+      8: { name: 'Коренная порода (Бедрок)', tiles: { top: 9, bottom: 9, side: 9 }, unbreakable: true, sound: 'stone' },
+      9: { name: 'Песок', tiles: { top: 10, bottom: 10, side: 10 }, sound: 'sand' },
+      10: { name: 'Стекло', tiles: { top: 11, bottom: 11, side: 11 }, transparent: true, opacity: 0.6, sound: 'glass' },
+      11: { name: 'Вода', tiles: { top: 12, bottom: 12, side: 12 }, transparent: true, opacity: 0.65, fluid: true, sound: 'water' },
+      12: { name: 'Кирпичи', tiles: { top: 13, bottom: 13, side: 13 }, sound: 'stone' },
+      13: { name: 'Угольная руда', tiles: { top: 14, bottom: 14, side: 14 }, sound: 'stone' },
+      14: { name: 'Железная руда', tiles: { top: 15, bottom: 15, side: 15 }, sound: 'stone' },
+      15: { name: 'Золотая руда', tiles: { top: 16, bottom: 16, side: 16 }, sound: 'stone' },
+      16: { name: 'Алмазная руда', tiles: { top: 17, bottom: 17, side: 17 }, sound: 'stone' },
+      17: { name: 'Динамит (TNT)', tiles: { top: 19, bottom: 19, side: 18 }, sound: 'dirt' },
+      18: { name: 'Книжный шкаф', tiles: { top: 7, bottom: 7, side: 20 }, sound: 'wood' },
+      19: { name: 'Светящийся камень', tiles: { top: 21, bottom: 21, side: 21 }, light: 15, sound: 'glass' }
+    };
+
+    // Build Procedural 512x512 Texture Atlas
+    function createProceduralAtlas() {
+      const atlasSize = 512;
+      const tileSize = 32;
+      const tilesPerRow = 16;
+      const canvas = document.createElement('canvas');
+      canvas.width = atlasSize;
+      canvas.height = atlasSize;
+      const ctx = canvas.getContext('2d');
+
+      // Helper function to draw pixel tile
+      function drawTile(tileIndex, paintFn) {
+        const tx = (tileIndex % tilesPerRow) * tileSize;
+        const ty = Math.floor(tileIndex / tilesPerRow) * tileSize;
+        ctx.save();
+        ctx.translate(tx, ty);
+        paintFn(ctx, tileSize);
+        ctx.restore();
+      }
+
+      // 0: Stone
+      drawTile(0, (c, s) => {
+        c.fillStyle = '#7a7a7a'; c.fillRect(0, 0, s, s);
+        for (let i = 0; i < 180; i++) {
+          const shade = Math.random() > 0.5 ? '#8e8e8e' : '#646464';
+          c.fillStyle = shade;
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+      });
+
+      // 1: Dirt
+      drawTile(1, (c, s) => {
+        c.fillStyle = '#865432'; c.fillRect(0, 0, s, s);
+        for (let i = 0; i < 160; i++) {
+          const shade = Math.random() > 0.5 ? '#6d4223' : '#9c6641';
+          c.fillStyle = shade;
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+      });
+
+      // 2: Grass Top
+      drawTile(2, (c, s) => {
+        c.fillStyle = '#4ca636'; c.fillRect(0, 0, s, s);
+        for (let i = 0; i < 200; i++) {
+          const shade = Math.random() > 0.5 ? '#3b8b28' : '#5dc244';
+          c.fillStyle = shade;
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+      });
+
+      // 3: Grass Side
+      drawTile(3, (c, s) => {
+        // Dirt base
+        c.fillStyle = '#865432'; c.fillRect(0, 0, s, s);
+        for (let i = 0; i < 120; i++) {
+          c.fillStyle = Math.random() > 0.5 ? '#6d4223' : '#9c6641';
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+        // Grass overhang
+        c.fillStyle = '#4ca636';
+        c.fillRect(0, 0, s, 6);
+        for (let x = 0; x < s; x += 2) {
+          const depth = 6 + Math.floor(Math.sin(x * 1.5) * 3 + Math.random() * 3);
+          c.fillRect(x, 0, 2, Math.min(s - 2, depth));
+        }
+      });
+
+      // 4: Oak Wood Bark (Side)
+      drawTile(4, (c, s) => {
+        c.fillStyle = '#674d32'; c.fillRect(0, 0, s, s);
+        for (let x = 0; x < s; x += 4) {
+          c.fillStyle = x % 8 === 0 ? '#4e3820' : '#7b5e40';
+          c.fillRect(x, 0, 3, s);
+        }
+        for (let i = 0; i < 80; i++) {
+          c.fillStyle = '#3a2714';
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 4);
+        }
+      });
+
+      // 5: Oak Wood Rings (Top/Bottom)
+      drawTile(5, (c, s) => {
+        c.fillStyle = '#a68050'; c.fillRect(0, 0, s, s);
+        c.lineWidth = 2;
+        c.strokeStyle = '#674d32';
+        c.strokeRect(1, 1, s - 2, s - 2);
+        c.strokeRect(6, 6, s - 12, s - 12);
+        c.strokeRect(11, 11, s - 22, s - 22);
+        c.fillStyle = '#4e3820';
+        c.fillRect(14, 14, 4, 4);
+      });
+
+      // 6: Leaves
+      drawTile(6, (c, s) => {
+        c.fillStyle = '#2d6a22'; c.fillRect(0, 0, s, s);
+        for (let i = 0; i < 220; i++) {
+          const shade = Math.random() > 0.4 ? '#388e2b' : '#1c4d15';
+          c.fillStyle = shade;
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+        // Alpha holes
+        for (let i = 0; i < 30; i++) {
+          c.clearRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+      });
+
+      // 7: Oak Planks
+      drawTile(7, (c, s) => {
+        c.fillStyle = '#bc9862'; c.fillRect(0, 0, s, s);
+        for (let y = 8; y < s; y += 8) {
+          c.fillStyle = '#7a5a32';
+          c.fillRect(0, y, s, 2);
+        }
+        for (let i = 0; i < 60; i++) {
+          c.fillStyle = '#a17e4a';
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 3, 1);
+        }
+        // Nails
+        c.fillStyle = '#42331f';
+        c.fillRect(2, 2, 2, 2); c.fillRect(s - 4, 2, 2, 2);
+        c.fillRect(2, 10, 2, 2); c.fillRect(s - 4, 10, 2, 2);
+        c.fillRect(2, 18, 2, 2); c.fillRect(s - 4, 18, 2, 2);
+        c.fillRect(2, 26, 2, 2); c.fillRect(s - 4, 26, 2, 2);
+      });
+
+      // 8: Cobblestone
+      drawTile(8, (c, s) => {
+        c.fillStyle = '#555555'; c.fillRect(0, 0, s, s);
+        c.fillStyle = '#333333';
+        // Mortar lines
+        c.fillRect(0, 8, s, 2); c.fillRect(0, 18, s, 2); c.fillRect(0, 26, s, 2);
+        c.fillRect(8, 0, 2, 8); c.fillRect(20, 8, 2, 10); c.fillRect(10, 18, 2, 8);
+        for (let i = 0; i < 140; i++) {
+          c.fillStyle = Math.random() > 0.5 ? '#777777' : '#444444';
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+      });
+
+      // 9: Bedrock
+      drawTile(9, (c, s) => {
+        c.fillStyle = '#1c1c1c'; c.fillRect(0, 0, s, s);
+        for (let i = 0; i < 180; i++) {
+          c.fillStyle = Math.random() > 0.5 ? '#363636' : '#0a0a0a';
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+      });
+
+      // 10: Sand
+      drawTile(10, (c, s) => {
+        c.fillStyle = '#dcd092'; c.fillRect(0, 0, s, s);
+        for (let i = 0; i < 160; i++) {
+          c.fillStyle = Math.random() > 0.5 ? '#cbbd79' : '#ece1a7';
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+      });
+
+      // 11: Glass
+      drawTile(11, (c, s) => {
+        c.fillStyle = 'rgba(215, 240, 255, 0.25)'; c.fillRect(0, 0, s, s);
+        c.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        // Frame border
+        c.fillRect(0, 0, s, 2); c.fillRect(0, s - 2, s, 2);
+        c.fillRect(0, 0, 2, s); c.fillRect(s - 2, 0, 2, s);
+        // Highlight shine diagonal
+        c.fillRect(6, 6, 2, 2); c.fillRect(8, 8, 2, 2);
+        c.fillRect(18, 6, 2, 2); c.fillRect(20, 8, 2, 2);
+      });
+
+      // 12: Water
+      drawTile(12, (c, s) => {
+        c.fillStyle = '#2980b9'; c.fillRect(0, 0, s, s);
+        for (let y = 0; y < s; y += 4) {
+          c.fillStyle = '#3498db';
+          c.fillRect(0, y, s, 2);
+        }
+        for (let i = 0; i < 80; i++) {
+          c.fillStyle = '#5dade2';
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 3, 1);
+        }
+      });
+
+      // 13: Brick
+      drawTile(13, (c, s) => {
+        c.fillStyle = '#9b3b29'; c.fillRect(0, 0, s, s);
+        c.fillStyle = '#dcdde1'; // Mortar
+        c.fillRect(0, 7, s, 1); c.fillRect(0, 15, s, 1); c.fillRect(0, 23, s, 1); c.fillRect(0, 31, s, 1);
+        c.fillRect(8, 0, 1, 7); c.fillRect(24, 0, 1, 7);
+        c.fillRect(16, 7, 1, 8); c.fillRect(8, 15, 1, 8); c.fillRect(24, 15, 1, 8);
+        for (let i = 0; i < 80; i++) {
+          c.fillStyle = Math.random() > 0.5 ? '#b24430' : '#802e1f';
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+      });
+
+      // Helper for Ores (Base stone with gems)
+      function drawOre(tileIdx, gemColor, gemColorLight) {
+        drawTile(tileIdx, (c, s) => {
+          // Stone base
+          c.fillStyle = '#7a7a7a'; c.fillRect(0, 0, s, s);
+          for (let i = 0; i < 120; i++) {
+            c.fillStyle = Math.random() > 0.5 ? '#8e8e8e' : '#646464';
+            c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+          }
+          // Ore Flecks
+          const patches = [
+            [6, 6], [8, 7], [10, 6], [7, 8],
+            [20, 12], [22, 13], [21, 15],
+            [8, 22], [10, 23], [12, 22],
+            [22, 24], [24, 25]
+          ];
+          patches.forEach(([ox, oy]) => {
+            c.fillStyle = gemColor;
+            c.fillRect(ox, oy, 3, 3);
+            c.fillStyle = gemColorLight;
+            c.fillRect(ox + 1, oy, 1, 1);
+          });
+        });
+      }
+
+      // 14: Coal Ore
+      drawOre(14, '#1e1e1e', '#3a3a3a');
+      // 15: Iron Ore
+      drawOre(15, '#d0a786', '#e8cbb1');
+      // 16: Gold Ore
+      drawOre(16, '#f1c40f', '#f9e79f');
+      // 17: Diamond Ore
+      drawOre(17, '#00d2d3', '#54a0ff');
+
+      // 18: TNT Side
+      drawTile(18, (c, s) => {
+        c.fillStyle = '#c0392b'; c.fillRect(0, 0, s, s);
+        c.fillStyle = '#ecf0f1'; c.fillRect(0, 10, s, 12);
+        c.fillStyle = '#1e272c';
+        c.font = 'bold 9px monospace';
+        c.fillText('TNT', 8, 19);
+      });
+      // 19: TNT Top/Bottom
+      drawTile(19, (c, s) => {
+        c.fillStyle = '#c0392b'; c.fillRect(0, 0, s, s);
+        c.fillStyle = '#34495e'; c.fillRect(4, 4, s - 8, s - 8);
+        c.fillStyle = '#7f8c8d'; c.fillRect(14, 14, 4, 4);
+      });
+
+      // 20: Bookshelf Side
+      drawTile(20, (c, s) => {
+        c.fillStyle = '#bc9862'; c.fillRect(0, 0, s, s);
+        // Inner shelves
+        c.fillStyle = '#2c1e10';
+        c.fillRect(2, 4, s - 4, 10);
+        c.fillRect(2, 18, s - 4, 10);
+        // Colorful books
+        const colors = ['#e74c3c', '#2980b9', '#27ae60', '#f39c12', '#8e44ad', '#d35400'];
+        let bx = 3;
+        while (bx < s - 5) {
+          c.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+          const bw = 3 + Math.floor(Math.random() * 2);
+          c.fillRect(bx, 5, bw, 8);
+          c.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+          c.fillRect(bx, 19, bw, 8);
+          bx += bw + 1;
+        }
+      });
+
+      // 21: Glowstone
+      drawTile(21, (c, s) => {
+        c.fillStyle = '#f39c12'; c.fillRect(0, 0, s, s);
+        for (let i = 0; i < 180; i++) {
+          c.fillStyle = Math.random() > 0.5 ? '#f1c40f' : '#f5b041';
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 2, 2);
+        }
+        for (let i = 0; i < 40; i++) {
+          c.fillStyle = '#ffffff';
+          c.fillRect(Math.floor(Math.random() * s), Math.floor(Math.random() * s), 1, 1);
+        }
+      });
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.NearestFilter;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return { texture, canvas, tileSize, tilesPerRow };
+    }
+
+    // --- 4. CHUNK CONSTANTS & WORLD SYSTEM ---
+    const CHUNK_W = 16;
+    const CHUNK_D = 16;
+    const CHUNK_H = 64;
+    const WATER_LEVEL = 22;
+
+    class Chunk {
+      constructor(cx, cz) {
+        this.cx = cx;
+        this.cz = cz;
+        this.voxels = new Uint8Array(CHUNK_W * CHUNK_H * CHUNK_D);
+        this.opaqueMesh = null;
+        this.transparentMesh = null;
+        this.isDirty = true;
+      }
+
+      getIndex(x, y, z) {
+        return x + z * CHUNK_W + y * (CHUNK_W * CHUNK_D);
+      }
+
+      getBlock(x, y, z) {
+        if (x < 0 || x >= CHUNK_W || y < 0 || y >= CHUNK_H || z < 0 || z >= CHUNK_D) return 0;
+        return this.voxels[this.getIndex(x, y, z)];
+      }
+
+      setBlock(x, y, z, id) {
+        if (x < 0 || x >= CHUNK_W || y < 0 || y >= CHUNK_H || z < 0 || z >= CHUNK_D) return false;
+        this.voxels[this.getIndex(x, y, z)] = id;
+        this.isDirty = true;
+        return true;
+      }
+    }
+
+    class VoxelWorld {
+      constructor(scene, atlas) {
+        this.scene = scene;
+        this.atlas = atlas;
+        this.chunks = new Map();
+        this.seed = 42817;
+        this.noise = new SimplexNoise(this.seed);
+        this.caveNoise = new SimplexNoise(this.seed + 9999);
+
+        // Materials
+        this.opaqueMaterial = new THREE.MeshLambertMaterial({
+          map: this.atlas.texture,
+          vertexColors: true,
+          side: THREE.FrontSide
+        });
+
+        this.transparentMaterial = new THREE.MeshLambertMaterial({
+          map: this.atlas.texture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.78,
+          alphaTest: 0.1,
+          side: THREE.DoubleSide,
+          depthWrite: true
+        });
+
+        this.waterMaterial = new THREE.MeshLambertMaterial({
+          map: this.atlas.texture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.65,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        });
+      }
+
+      chunkKey(cx, cz) {
+        return `${cx},${cz}`;
+      }
+
+      getChunk(cx, cz) {
+        return this.chunks.get(this.chunkKey(cx, cz));
+      }
+
+      getOrCreateChunk(cx, cz) {
+        let chunk = this.getChunk(cx, cz);
+        if (!chunk) {
+          chunk = new Chunk(cx, cz);
+          this.generateTerrain(chunk);
+          this.chunks.set(this.chunkKey(cx, cz), chunk);
+        }
+        return chunk;
+      }
+
+      getBlock(wx, wy, wz) {
+        if (wy < 0 || wy >= CHUNK_H) return 0;
+        const cx = Math.floor(wx / CHUNK_W);
+        const cz = Math.floor(wz / CHUNK_D);
+        const chunk = this.getChunk(cx, cz);
+        if (!chunk) return 0;
+        const lx = ((wx % CHUNK_W) + CHUNK_W) % CHUNK_W;
+        const lz = ((wz % CHUNK_D) + CHUNK_D) % CHUNK_D;
+        return chunk.getBlock(lx, wy, lz);
+      }
+
+      setBlock(wx, wy, wz, id) {
+        if (wy < 0 || wy >= CHUNK_H) return false;
+        const cx = Math.floor(wx / CHUNK_W);
+        const cz = Math.floor(wz / CHUNK_D);
+        const chunk = this.getOrCreateChunk(cx, cz);
+        const lx = ((wx % CHUNK_W) + CHUNK_W) % CHUNK_W;
+        const lz = ((wz % CHUNK_D) + CHUNK_D) % CHUNK_D;
+        const prev = chunk.getBlock(lx, wy, lz);
+        if (prev === id) return false;
+        chunk.setBlock(lx, wy, lz, id);
+
+        // Mark neighbors dirty if on boundary
+        if (lx === 0) this.markChunkDirty(cx - 1, cz);
+        if (lx === CHUNK_W - 1) this.markChunkDirty(cx + 1, cz);
+        if (lz === 0) this.markChunkDirty(cx, cz - 1);
+        if (lz === CHUNK_D - 1) this.markChunkDirty(cx, cz + 1);
+
+        return true;
+      }
+
+      markChunkDirty(cx, cz) {
+        const c = this.getChunk(cx, cz);
+        if (c) c.isDirty = true;
+      }
+
+      isSolid(wx, wy, wz) {
+        const b = this.getBlock(wx, wy, wz);
+        return b !== BLOCKS.AIR && b !== BLOCKS.WATER;
+      }
+
+      isTransparent(blockId) {
+        if (blockId === BLOCKS.AIR) return true;
+        const def = BLOCK_DEFS[blockId];
+        return def && def.transparent;
+      }
+
+      // Procedural Generation: Terrain, Biomes, Ores, Caves & Trees
+      generateTerrain(chunk) {
+        const worldX = chunk.cx * CHUNK_W;
+        const worldZ = chunk.cz * CHUNK_D;
+
+        for (let lx = 0; lx < CHUNK_W; lx++) {
+          for (let lz = 0; lz < CHUNK_D; lz++) {
+            const wx = worldX + lx;
+            const wz = worldZ + lz;
+
+            // Height calculation with Simplex noise fBm
+            const baseElevation = 26;
+            const hillNoise = this.noise.fBm2D(wx * 0.015, wz * 0.015, 4, 2.0, 0.5) * 16;
+            const mountainNoise = Math.pow(Math.max(0, this.noise.noise2D(wx * 0.008, wz * 0.008)), 2) * 20;
+            const detailNoise = this.noise.noise2D(wx * 0.05, wz * 0.05) * 2.5;
+
+            const surfaceHeight = Math.floor(baseElevation + hillNoise + mountainNoise + detailNoise);
+            const clampedHeight = Math.min(CHUNK_H - 10, Math.max(2, surfaceHeight));
+
+            for (let y = 0; y < CHUNK_H; y++) {
+              if (y === 0) {
+                // Bedrock at the very bottom
+                chunk.setBlock(lx, y, lz, BLOCKS.BEDROCK);
+              } else if (y <= clampedHeight) {
+                // 3D Cave Noise subtraction
+                const caveVal = this.caveNoise.noise3D(wx * 0.045, y * 0.065, wz * 0.045);
+                if (caveVal > 0.42 && y > 3 && y < clampedHeight - 2) {
+                  // Cave air hollow
+                  continue;
+                }
+
+                if (y === clampedHeight) {
+                  if (y < WATER_LEVEL + 2) {
+                    // Sand beach near water
+                    chunk.setBlock(lx, y, lz, BLOCKS.SAND);
+                  } else {
+                    // Top grass
+                    chunk.setBlock(lx, y, lz, BLOCKS.GRASS);
+                  }
+                } else if (y >= clampedHeight - 3) {
+                  // Dirt layer below grass
+                  if (clampedHeight < WATER_LEVEL + 2) {
+                    chunk.setBlock(lx, y, lz, BLOCKS.SAND);
+                  } else {
+                    chunk.setBlock(lx, y, lz, BLOCKS.DIRT);
+                  }
+                } else {
+                  // Deep stone with ore veins
+                  let stoneBlock = BLOCKS.STONE;
+                  const oreSeed = (Math.sin(wx * 12.9898 + y * 78.233 + wz * 37.719) * 43758.5453) % 1;
+                  const absOre = Math.abs(oreSeed);
+
+                  if (y < 12 && absOre > 0.985) {
+                    stoneBlock = BLOCKS.DIAMOND_ORE;
+                  } else if (y < 18 && absOre > 0.975) {
+                    stoneBlock = BLOCKS.GOLD_ORE;
+                  } else if (y < 32 && absOre > 0.94) {
+                    stoneBlock = BLOCKS.IRON_ORE;
+                  } else if (absOre > 0.91) {
+                    stoneBlock = BLOCKS.COAL_ORE;
+                  }
+                  chunk.setBlock(lx, y, lz, stoneBlock);
+                }
+              } else if (y <= WATER_LEVEL) {
+                // Ocean / Lakes
+                chunk.setBlock(lx, y, lz, BLOCKS.WATER);
+              }
+            }
+
+            // Procedural Oak Trees placement on grass
+            if (clampedHeight >= WATER_LEVEL + 3 && clampedHeight < CHUNK_H - 12) {
+              const treeNoise = Math.abs(this.noise.noise2D(wx * 0.35, wz * 0.35));
+              if (treeNoise > 0.82 && lx >= 2 && lx <= CHUNK_W - 3 && lz >= 2 && lz <= CHUNK_D - 3) {
+                this.growTree(chunk, lx, clampedHeight + 1, lz);
+              }
+            }
+          }
+        }
+      }
+
+      growTree(chunk, x, y, z) {
+        const trunkHeight = 4 + Math.floor(Math.random() * 2);
+        // Wood trunk
+        for (let ty = 0; ty < trunkHeight; ty++) {
+          chunk.setBlock(x, y + ty, z, BLOCKS.WOOD);
+        }
+        // Leaves canopy
+        const leafBase = y + trunkHeight - 2;
+        for (let ly = leafBase; ly <= y + trunkHeight + 1; ly++) {
+          const radius = ly >= y + trunkHeight ? 1 : 2;
+          for (let dx = -radius; dx <= radius; dx++) {
+            for (let dz = -radius; dz <= radius; dz++) {
+              if (dx === 0 && dz === 0 && ly < y + trunkHeight) continue; // trunk inside
+              if (Math.abs(dx) === 2 && Math.abs(dz) === 2 && Math.random() > 0.6) continue;
+              const cur = chunk.getBlock(x + dx, ly, z + dz);
+              if (cur === BLOCKS.AIR) {
+                chunk.setBlock(x + dx, ly, z + dz, BLOCKS.LEAVES);
+              }
+            }
+          }
+        }
+      }
+
+      // Re-mesh Chunk with Per-Vertex Ambient Occlusion (AO)
+      buildChunkMesh(chunk) {
+        const cx = chunk.cx;
+        const cz = chunk.cz;
+        const startWX = cx * CHUNK_W;
+        const startWZ = cz * CHUNK_D;
+
+        // Buffers for Opaque and Transparent/Water meshes
+        const opPos = [], opNorm = [], opUV = [], opCol = [], opIdx = [];
+        const trPos = [], trNorm = [], trUV = [], trCol = [], trIdx = [];
+        let opVertCount = 0;
+        let trVertCount = 0;
+
+        const tilesPerRow = this.atlas.tilesPerRow;
+        const tileUVSize = 1.0 / tilesPerRow;
+
+        // Direction definitions
+        const FACES = [
+          { dir: [0, 1, 0], name: 'top', corners: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]] },
+          { dir: [0, -1, 0], name: 'bottom', corners: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]] },
+          { dir: [1, 0, 0], name: 'side', corners: [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]] },
+          { dir: [-1, 0, 0], name: 'side', corners: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]] },
+          { dir: [0, 0, 1], name: 'side', corners: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]] },
+          { dir: [0, 0, -1], name: 'side', corners: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]] }
+        ];
+
+        // Ambient Occlusion helper: samples 3 surrounding voxels at a vertex corner
+        const calcAO = (s1, s2, corner) => {
+          if (s1 && s2) return 0.45; // Max shadow
+          const count = (s1 ? 1 : 0) + (s2 ? 1 : 0) + (corner ? 1 : 0);
+          if (count === 0) return 1.0;
+          if (count === 1) return 0.82;
+          if (count === 2) return 0.65;
+          return 0.45;
+        };
+
+        for (let x = 0; x < CHUNK_W; x++) {
+          for (let y = 0; y < CHUNK_H; y++) {
+            for (let z = 0; z < CHUNK_D; z++) {
+              const blockId = chunk.getBlock(x, y, z);
+              if (blockId === BLOCKS.AIR) continue;
+
+              const def = BLOCK_DEFS[blockId];
+              const isWater = blockId === BLOCKS.WATER;
+              const isTrans = def.transparent || isWater;
+              const wx = startWX + x;
+              const wz = startWZ + z;
+
+              for (const face of FACES) {
+                const nx = face.dir[0];
+                const ny = face.dir[1];
+                const nz = face.dir[2];
+
+                const neighborId = this.getBlock(wx + nx, y + ny, wz + nz);
+
+                // Cull faces between identical transparent blocks (e.g. water next to water)
+                if (isWater && neighborId === BLOCKS.WATER) continue;
+                if (!isWater && !this.isTransparent(neighborId)) continue;
+                if (isTrans && neighborId === blockId && blockId !== BLOCKS.LEAVES) continue;
+
+                // Determine tile UV
+                let tileIdx = 0;
+                if (def.tiles) {
+                  tileIdx = def.tiles[face.name] !== undefined ? def.tiles[face.name] : def.tiles.side;
+                }
+                const tu = (tileIdx % tilesPerRow) * tileUVSize;
+                const tv = 1.0 - (Math.floor(tileIdx / tilesPerRow) + 1) * tileUVSize;
+
+                const targetPos = isTrans ? trPos : opPos;
+                const targetNorm = isTrans ? trNorm : opNorm;
+                const targetUV = isTrans ? trUV : opUV;
+                const targetCol = isTrans ? trCol : opCol;
+                const targetIdx = isTrans ? trIdx : opIdx;
+                let curVert = isTrans ? trVertCount : opVertCount;
+
+                // Face lighting multiplier for directional depth
+                let faceLight = 1.0;
+                if (ny === 1) faceLight = 1.0;
+                else if (ny === -1) faceLight = 0.55;
+                else if (nx !== 0) faceLight = 0.78;
+                else if (nz !== 0) faceLight = 0.68;
+
+                // Emit 4 vertices for the quad
+                for (let i = 0; i < 4; i++) {
+                  const corner = face.corners[i];
+                  const vx = wx + corner[0];
+                  const vy = y + corner[1];
+                  const vz = wz + corner[2];
+
+                  targetPos.push(vx, vy, vz);
+                  targetNorm.push(nx, ny, nz);
+
+                  // UV coordinates for the quad
+                  if (i === 0) targetUV.push(tu, tv);
+                  else if (i === 1) targetUV.push(tu + tileUVSize, tv);
+                  else if (i === 2) targetUV.push(tu + tileUVSize, tv + tileUVSize);
+                  else if (i === 3) targetUV.push(tu, tv + tileUVSize);
+
+                  // Compute vertex AO
+                  let ao = 1.0;
+                  if (!isWater) {
+                    let s1 = false, s2 = false, cCorner = false;
+                    if (ny !== 0) {
+                      s1 = this.isSolid(wx + (corner[0] ? 1 : -1), y + ny, wz);
+                      s2 = this.isSolid(wx, y + ny, wz + (corner[2] ? 1 : -1));
+                      cCorner = this.isSolid(wx + (corner[0] ? 1 : -1), y + ny, wz + (corner[2] ? 1 : -1));
+                    } else if (nx !== 0) {
+                      s1 = this.isSolid(wx + nx, y + (corner[1] ? 1 : -1), wz);
+                      s2 = this.isSolid(wx + nx, y, wz + (corner[2] ? 1 : -1));
+                      cCorner = this.isSolid(wx + nx, y + (corner[1] ? 1 : -1), wz + (corner[2] ? 1 : -1));
+                    } else if (nz !== 0) {
+                      s1 = this.isSolid(wx + (corner[0] ? 1 : -1), y, wz + nz);
+                      s2 = this.isSolid(wx, y + (corner[1] ? 1 : -1), wz + nz);
+                      cCorner = this.isSolid(wx + (corner[0] ? 1 : -1), y + (corner[1] ? 1 : -1), wz + nz);
+                    }
+                    ao = calcAO(s1, s2, cCorner);
+                  }
+
+                  const shade = faceLight * ao;
+                  targetCol.push(shade, shade, shade);
+                }
+
+                // 2 Triangles per quad
+                targetIdx.push(
+                  curVert, curVert + 1, curVert + 2,
+                  curVert, curVert + 2, curVert + 3
+                );
+
+                if (isTrans) trVertCount += 4;
+                else opVertCount += 4;
+              }
+            }
+          }
+        }
+
+        // Clean previous meshes
+        if (chunk.opaqueMesh) {
+          this.scene.remove(chunk.opaqueMesh);
+          chunk.opaqueMesh.geometry.dispose();
+          chunk.opaqueMesh = null;
+        }
+        if (chunk.transparentMesh) {
+          this.scene.remove(chunk.transparentMesh);
+          chunk.transparentMesh.geometry.dispose();
+          chunk.transparentMesh = null;
+        }
+
+        // Create new Opaque Mesh
+        if (opPos.length > 0) {
+          const geom = new THREE.BufferGeometry();
+          geom.setAttribute('position', new THREE.Float32BufferAttribute(opPos, 3));
+          geom.setAttribute('normal', new THREE.Float32BufferAttribute(opNorm, 3));
+          geom.setAttribute('uv', new THREE.Float32BufferAttribute(opUV, 2));
+          geom.setAttribute('color', new THREE.Float32BufferAttribute(opCol, 3));
+          geom.setIndex(opIdx);
+          chunk.opaqueMesh = new THREE.Mesh(geom, this.opaqueMaterial);
+          this.scene.add(chunk.opaqueMesh);
+        }
+
+        // Create new Transparent Mesh (Water & Glass)
+        if (trPos.length > 0) {
+          const geom = new THREE.BufferGeometry();
+          geom.setAttribute('position', new THREE.Float32BufferAttribute(trPos, 3));
+          geom.setAttribute('normal', new THREE.Float32BufferAttribute(trNorm, 3));
+          geom.setAttribute('uv', new THREE.Float32BufferAttribute(trUV, 2));
+          geom.setAttribute('color', new THREE.Float32BufferAttribute(trCol, 3));
+          geom.setIndex(trIdx);
+          chunk.transparentMesh = new THREE.Mesh(geom, this.waterMaterial);
+          this.scene.add(chunk.transparentMesh);
+        }
+
+        chunk.isDirty = false;
+      }
+
+      updateAround(playerX, playerZ, renderDist = 3) {
+        const pcx = Math.floor(playerX / CHUNK_W);
+        const pcz = Math.floor(playerZ / CHUNK_D);
+
+        // Load & re-mesh needed chunks
+        for (let dx = -renderDist; dx <= renderDist; dx++) {
+          for (let dz = -renderDist; dz <= renderDist; dz++) {
+            const chunk = this.getOrCreateChunk(pcx + dx, pcz + dz);
+            if (chunk.isDirty) {
+              this.buildChunkMesh(chunk);
+            }
+          }
+        }
+
+        // Unload far chunks to save memory
+        const maxDistSq = (renderDist + 1) * (renderDist + 1);
+        for (const [key, chunk] of this.chunks) {
+          const ddx = chunk.cx - pcx;
+          const ddz = chunk.cz - pcz;
+          if (ddx * ddx + ddz * ddz > maxDistSq) {
+            if (chunk.opaqueMesh) {
+              this.scene.remove(chunk.opaqueMesh);
+              chunk.opaqueMesh.geometry.dispose();
+            }
+            if (chunk.transparentMesh) {
+              this.scene.remove(chunk.transparentMesh);
+              chunk.transparentMesh.geometry.dispose();
+            }
+            this.chunks.delete(key);
+          }
+        }
+      }
+
+      reset(seed = Math.floor(Math.random() * 999999)) {
+        for (const chunk of this.chunks.values()) {
+          if (chunk.opaqueMesh) {
+            this.scene.remove(chunk.opaqueMesh);
+            chunk.opaqueMesh.geometry.dispose();
+          }
+          if (chunk.transparentMesh) {
+            this.scene.remove(chunk.transparentMesh);
+            chunk.transparentMesh.geometry.dispose();
+          }
+        }
+        this.chunks.clear();
+        this.seed = seed;
+        this.noise = new SimplexNoise(seed);
+        this.caveNoise = new SimplexNoise(seed + 9999);
+      }
+    }
+
+    // --- 5. AABB PHYSICS & FIRST-PERSON CONTROLLER ---
+    class PlayerController {
+      constructor(camera, world, audioEngine) {
+        this.camera = camera;
+        this.world = world;
+        this.audio = audioEngine;
+
+        this.position = new THREE.Vector3(8, 36, 8);
+        this.velocity = new THREE.Vector3(0, 0, 0);
+
+        this.width = 0.6;
+        this.height = 1.8;
+        this.eyeHeight = 1.62;
+
+        this.pitch = 0;
+        this.yaw = 0;
+
+        this.isGrounded = false;
+        this.inWater = false;
+        this.isFlying = false;
+        this.isSprinting = false;
+
+        // Input states
+        this.keys = {
+          forward: false,
+          backward: false,
+          left: false,
+          right: false,
+          jump: false,
+          down: false
+        };
+
+        this.virtualJoystick = { x: 0, y: 0 };
+        this.stepTimer = 0;
+      }
+
+      getAABB(pos = this.position) {
+        const halfW = this.width / 2;
+        return {
+          minX: pos.x - halfW,
+          maxX: pos.x + halfW,
+          minY: pos.y,
+          maxY: pos.y + this.height,
+          minZ: pos.z - halfW,
+          maxZ: pos.z + halfW
+        };
+      }
+
+      update(dt) {
+        // Clamp dt to avoid physics tunnel
+        const delta = Math.min(dt, 0.08);
+
+        // Check water immersion
+        const headBlock = this.world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y + 1.2), Math.floor(this.position.z));
+        this.inWater = headBlock === BLOCKS.WATER;
+
+        // Determine move speed
+        let speed = 4.8;
+        if (this.isSprinting) speed *= 1.45;
+        if (this.isFlying) speed *= 2.4;
+        if (this.inWater) speed *= 0.6;
+
+        // Direction vectors based on camera yaw
+        const sinYaw = Math.sin(this.yaw);
+        const cosYaw = Math.cos(this.yaw);
+
+        let inputX = 0;
+        let inputZ = 0;
+
+        if (this.keys.forward) inputZ += 1;
+        if (this.keys.backward) inputZ -= 1;
+        if (this.keys.left) inputX -= 1;
+        if (this.keys.right) inputX += 1;
+
+        // Blend virtual joystick if active
+        if (Math.abs(this.virtualJoystick.x) > 0.05 || Math.abs(this.virtualJoystick.y) > 0.05) {
+          inputX += this.virtualJoystick.x;
+          inputZ += this.virtualJoystick.y;
+        }
+
+        // Normalize movement vector
+        const len = Math.hypot(inputX, inputZ);
+        if (len > 0.01) {
+          const nx = inputX / (len > 1 ? len : 1);
+          const nz = inputZ / (len > 1 ? len : 1);
+
+          const moveX = (nx * cosYaw + nz * sinYaw) * speed;
+          const moveZ = (-nx * sinYaw + nz * cosYaw) * speed;
+
+          this.velocity.x = moveX;
+          this.velocity.z = moveZ;
+
+          // Footstep audio
+          if (this.isGrounded && !this.isFlying) {
+            this.stepTimer += delta * (this.isSprinting ? 1.4 : 1.0);
+            if (this.stepTimer > 0.38) {
+              this.audio.playFootstep();
+              this.stepTimer = 0;
+            }
+          }
+        } else {
+          // Horizontal friction damping
+          this.velocity.x *= 0.75;
+          this.velocity.z *= 0.75;
+        }
+
+        // Vertical Movement & Gravity
+        if (this.isFlying) {
+          let vert = 0;
+          if (this.keys.jump) vert += speed;
+          if (this.keys.down) vert -= speed;
+          this.velocity.y = vert;
+        } else if (this.inWater) {
+          if (this.keys.jump) {
+            this.velocity.y = 3.2;
+          } else {
+            this.velocity.y = -2.0; // Slow sinking
+          }
+        } else {
+          // Standard gravity
+          this.velocity.y -= 26.0 * delta;
+          if (this.keys.jump && this.isGrounded) {
+            this.velocity.y = 9.2;
+            this.audio.playJump();
+            this.isGrounded = false;
+          }
+        }
+
+        // Discrete Collision Resolution across X, Y, Z axes
+        this.resolveCollisions(delta);
+
+        // Update Camera
+        this.camera.position.set(
+          this.position.x,
+          this.position.y + this.eyeHeight,
+          this.position.z
+        );
+
+        // Camera Euler angles
+        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+        euler.x = this.pitch;
+        euler.y = this.yaw;
+        this.camera.quaternion.setFromEuler(euler);
+      }
+
+      resolveCollisions(dt) {
+        // Step Y
+        this.position.y += this.velocity.y * dt;
+        let box = this.getAABB();
+
+        this.isGrounded = false;
+        let minX = Math.floor(box.minX);
+        let maxX = Math.floor(box.maxX);
+        let minY = Math.floor(box.minY);
+        let maxY = Math.floor(box.maxY);
+        let minZ = Math.floor(box.minZ);
+        let maxZ = Math.floor(box.maxZ);
+
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            for (let z = minZ; z <= maxZ; z++) {
+              if (this.world.isSolid(x, y, z)) {
+                if (this.velocity.y < 0) {
+                  // Hit floor
+                  this.position.y = y + 1;
+                  this.velocity.y = 0;
+                  this.isGrounded = true;
+                } else if (this.velocity.y > 0) {
+                  // Hit ceiling
+                  this.position.y = y - this.height;
+                  this.velocity.y = 0;
+                }
+                box = this.getAABB();
+              }
+            }
+          }
+        }
+
+        // Step X
+        this.position.x += this.velocity.x * dt;
+        box = this.getAABB();
+        minX = Math.floor(box.minX); maxX = Math.floor(box.maxX);
+        minY = Math.floor(box.minY); maxY = Math.floor(box.maxY);
+        minZ = Math.floor(box.minZ); maxZ = Math.floor(box.maxZ);
+
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            for (let z = minZ; z <= maxZ; z++) {
+              if (this.world.isSolid(x, y, z)) {
+                if (this.velocity.x > 0) {
+                  this.position.x = x - this.width / 2;
+                } else if (this.velocity.x < 0) {
+                  this.position.x = x + 1 + this.width / 2;
+                }
+                this.velocity.x = 0;
+                box = this.getAABB();
+              }
+            }
+          }
+        }
+
+        // Step Z
+        this.position.z += this.velocity.z * dt;
+        box = this.getAABB();
+        minX = Math.floor(box.minX); maxX = Math.floor(box.maxX);
+        minY = Math.floor(box.minY); maxY = Math.floor(box.maxY);
+        minZ = Math.floor(box.minZ); maxZ = Math.floor(box.maxZ);
+
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            for (let z = minZ; z <= maxZ; z++) {
+              if (this.world.isSolid(x, y, z)) {
+                if (this.velocity.z > 0) {
+                  this.position.z = z - this.width / 2;
+                } else if (this.velocity.z < 0) {
+                  this.position.z = z + 1 + this.width / 2;
+                }
+                this.velocity.z = 0;
+                box = this.getAABB();
+              }
+            }
+          }
+        }
+      }
+
+      rotate(deltaYaw, deltaPitch) {
+        this.yaw -= deltaYaw;
+        this.pitch -= deltaPitch;
+        // Clamp pitch to look almost straight up/down (-89 to 89 deg)
+        const maxPitch = Math.PI / 2 - 0.02;
+        this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch));
+      }
+    }
+
+    // --- 6. RAYCASTING, HIGHLIGHT WIREFRAME & PARTICLES ---
+    class InteractionManager {
+      constructor(scene, camera, world, player, audio) {
+        this.scene = scene;
+        this.camera = camera;
+        this.world = world;
+        this.player = player;
+        this.audio = audio;
+
+        this.target = null; // { hit: [x,y,z], face: [nx,ny,nz], place: [x,y,z], blockId }
+        this.maxReach = 6.5;
+
+        // Selection Wireframe Box
+        const wireGeom = new THREE.BoxGeometry(1.004, 1.004, 1.004);
+        const wireEdges = new THREE.EdgesGeometry(wireGeom);
+        this.wireMesh = new THREE.LineSegments(
+          wireEdges,
+          new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2.5 })
+        );
+        this.wireMesh.visible = false;
+        this.scene.add(this.wireMesh);
+
+        // Particle System for Block Breaking
+        this.particles = [];
+        this.particleGeom = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+        this.particleMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      }
+
+      // Fast 3D DDA (Digital Differential Analyzer) voxel traversal
+      raycast() {
+        const origin = this.camera.position;
+        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion).normalize();
+
+        let x = Math.floor(origin.x);
+        let y = Math.floor(origin.y);
+        let z = Math.floor(origin.z);
+
+        const stepX = dir.x > 0 ? 1 : -1;
+        const stepY = dir.y > 0 ? 1 : -1;
+        const stepZ = dir.z > 0 ? 1 : -1;
+
+        const deltaX = Math.abs(1 / dir.x);
+        const deltaY = Math.abs(1 / dir.y);
+        const deltaZ = Math.abs(1 / dir.z);
+
+        let tMaxX = (dir.x > 0 ? (x + 1 - origin.x) : (origin.x - x)) * deltaX;
+        let tMaxY = (dir.y > 0 ? (y + 1 - origin.y) : (origin.y - y)) * deltaY;
+        let tMaxZ = (dir.z > 0 ? (z + 1 - origin.z) : (origin.z - z)) * deltaZ;
+
+        let faceNormal = [0, 0, 0];
+        let dist = 0;
+
+        while (dist < this.maxReach) {
+          const block = this.world.getBlock(x, y, z);
+          if (block !== BLOCKS.AIR && block !== BLOCKS.WATER) {
+            this.target = {
+              hit: [x, y, z],
+              face: faceNormal,
+              place: [x + faceNormal[0], y + faceNormal[1], z + faceNormal[2]],
+              blockId: block
+            };
+            this.wireMesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+            this.wireMesh.visible = true;
+            return this.target;
+          }
+
+          if (tMaxX < tMaxY) {
+            if (tMaxX < tMaxZ) {
+              dist = tMaxX;
+              x += stepX;
+              tMaxX += deltaX;
+              faceNormal = [-stepX, 0, 0];
+            } else {
+              dist = tMaxZ;
+              z += stepZ;
+              tMaxZ += deltaZ;
+              faceNormal = [0, 0, -stepZ];
+            }
+          } else {
+            if (tMaxY < tMaxZ) {
+              dist = tMaxY;
+              y += stepY;
+              tMaxY += deltaY;
+              faceNormal = [0, -stepY, 0];
+            } else {
+              dist = tMaxZ;
+              z += stepZ;
+              tMaxZ += deltaZ;
+              faceNormal = [0, 0, -stepZ];
+            }
+          }
+        }
+
+        this.target = null;
+        this.wireMesh.visible = false;
+        return null;
+      }
+
+      breakTargetBlock() {
+        if (!this.target) return null;
+        const [x, y, z] = this.target.hit;
+        const blockId = this.target.blockId;
+
+        if (blockId === BLOCKS.BEDROCK) return null; // Unbreakable
+
+        // Audio & Particles
+        this.audio.playBreak(blockId);
+        this.spawnBlockDebris(x, y, z, blockId);
+
+        // Remove block
+        this.world.setBlock(x, y, z, BLOCKS.AIR);
+        return blockId;
+      }
+
+      placeBlock(blockId) {
+        if (!this.target) return false;
+        const [px, py, pz] = this.target.place;
+
+        // Prevent placing inside player AABB
+        const playerBox = this.player.getAABB();
+        const blockBox = {
+          minX: px, maxX: px + 1,
+          minY: py, maxY: py + 1,
+          minZ: pz, maxZ: pz + 1
+        };
+
+        const intersect = (
+          playerBox.minX < blockBox.maxX && playerBox.maxX > blockBox.minX &&
+          playerBox.minY < blockBox.maxY && playerBox.maxY > blockBox.minY &&
+          playerBox.minZ < blockBox.maxZ && playerBox.maxZ > blockBox.minZ
+        );
+
+        if (intersect) return false;
+
+        this.world.setBlock(px, py, pz, blockId);
+        this.audio.playPlace(blockId);
+        return true;
+      }
+
+      spawnBlockDebris(bx, by, bz, blockId) {
+        // Pick representative color
+        let col = 0x8e8e8e;
+        if (blockId === BLOCKS.GRASS) col = 0x4ca636;
+        else if (blockId === BLOCKS.DIRT) col = 0x865432;
+        else if (blockId === BLOCKS.WOOD) col = 0x674d32;
+        else if (blockId === BLOCKS.LEAVES) col = 0x2d6a22;
+        else if (blockId === BLOCKS.SAND) col = 0xdcd092;
+        else if (blockId === BLOCKS.BRICK) col = 0x9b3b29;
+        else if (blockId === BLOCKS.TNT) col = 0xc0392b;
+
+        const count = 12;
+        for (let i = 0; i < count; i++) {
+          const mat = new THREE.MeshBasicMaterial({ color: col });
+          const mesh = new THREE.Mesh(this.particleGeom, mat);
+          mesh.position.set(
+            bx + 0.5 + (Math.random() * 0.6 - 0.3),
+            by + 0.5 + (Math.random() * 0.6 - 0.3),
+            bz + 0.5 + (Math.random() * 0.6 - 0.3)
+          );
+          const vel = new THREE.Vector3(
+            (Math.random() - 0.5) * 4.5,
+            Math.random() * 4.5 + 1.5,
+            (Math.random() - 0.5) * 4.5
+          );
+          this.scene.add(mesh);
+          this.particles.push({ mesh, vel, life: 0.6, maxLife: 0.6 });
+        }
+      }
+
+      updateParticles(dt) {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.life -= dt;
+          if (p.life <= 0) {
+            this.scene.remove(p.mesh);
+            p.mesh.material.dispose();
+            this.particles.splice(i, 1);
+            continue;
+          }
+          p.vel.y -= 16.0 * dt;
+          p.mesh.position.addScaledVector(p.vel, dt);
+          const scale = p.life / p.maxLife;
+          p.mesh.scale.set(scale, scale, scale);
+        }
+      }
+    }
+
+    // --- 7. FIRST-PERSON HELD HAND / BLOCK ---
+    class HeldItemView {
+      constructor(camera, atlas) {
+        this.camera = camera;
+        this.atlas = atlas;
+
+        // Container attached to camera
+        this.container = new THREE.Group();
+        this.camera.add(this.container);
+
+        // Position hand in lower-right viewport
+        this.container.position.set(0.42, -0.38, -0.65);
+        this.container.rotation.set(0.15, -0.45, 0.1);
+
+        const geom = new THREE.BoxGeometry(0.24, 0.24, 0.24);
+        const mat = new THREE.MeshLambertMaterial({
+          map: this.atlas.texture,
+          side: THREE.FrontSide
+        });
+        this.itemMesh = new THREE.Mesh(geom, mat);
+        this.container.add(this.itemMesh);
+
+        this.swingProgress = 0;
+        this.isSwinging = false;
+        this.bobTime = 0;
+      }
+
+      triggerSwing() {
+        this.isSwinging = true;
+        this.swingProgress = 0;
+      }
+
+      update(dt, isMoving) {
+        // Natural walking bob
+        if (isMoving) {
+          this.bobTime += dt * 9;
+        } else {
+          this.bobTime += dt * 1.5;
+        }
+
+        const bobX = Math.cos(this.bobTime * 0.5) * 0.015;
+        const bobY = Math.sin(this.bobTime) * 0.02;
+
+        let swingRotX = 0;
+        let swingRotZ = 0;
+
+        if (this.isSwinging) {
+          this.swingProgress += dt * 7.5;
+          if (this.swingProgress >= Math.PI) {
+            this.isSwinging = false;
+            this.swingProgress = 0;
+          } else {
+            const swingSin = Math.sin(this.swingProgress);
+            swingRotX = -swingSin * 0.7;
+            swingRotZ = -swingSin * 0.4;
+          }
+        }
+
+        this.itemMesh.position.set(bobX, bobY, 0);
+        this.itemMesh.rotation.set(swingRotX, 0, swingRotZ);
+      }
+
+      setBlock(blockId) {
+        if (blockId === BLOCKS.AIR) {
+          this.itemMesh.visible = false;
+          return;
+        }
+        this.itemMesh.visible = true;
+      }
+    }
+
+    // --- 8. DAY/NIGHT ATMOSPHERE & CELESTIAL ENGINE ---
+    class SkyAtmosphere {
+      constructor(scene, renderer) {
+        this.scene = scene;
+        this.renderer = renderer;
+
+        this.timeOfDay = 10.0; // 0 to 24 hours
+        this.daySpeed = 1.0;   // 1 hour = ~10 seconds
+
+        // Lights
+        this.sunLight = new THREE.DirectionalLight(0xfffaed, 1.2);
+        this.sunLight.castShadow = false;
+        this.scene.add(this.sunLight);
+
+        this.hemiLight = new THREE.HemisphereLight(0x78a7ff, 0x3d4825, 0.65);
+        this.scene.add(this.hemiLight);
+
+        // Sun & Moon Meshes
+        const sunGeom = new THREE.BoxGeometry(18, 18, 4);
+        const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff475 });
+        this.sunMesh = new THREE.Mesh(sunGeom, sunMat);
+        this.scene.add(this.sunMesh);
+
+        const moonGeom = new THREE.BoxGeometry(14, 14, 4);
+        const moonMat = new THREE.MeshBasicMaterial({ color: 0xf5f6fa });
+        this.moonMesh = new THREE.Mesh(moonGeom, moonMat);
+        this.scene.add(this.moonMesh);
+
+        // Procedural Clouds Layer (High in the sky at Y=54)
+        this.createCloudLayer();
+
+        // Fog
+        this.scene.fog = new THREE.Fog(0x78a7ff, 25, 65);
+      }
+
+      createCloudLayer() {
+        const cloudGroup = new THREE.Group();
+        const cloudGeom = new THREE.BoxGeometry(12, 3, 12);
+        const cloudMat = new THREE.MeshLambertMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.72
+        });
+
+        // Scatter 40 procedural cloud chunks
+        for (let i = 0; i < 40; i++) {
+          const mesh = new THREE.Mesh(cloudGeom, cloudMat);
+          mesh.position.set(
+            (Math.random() - 0.5) * 260,
+            54 + Math.random() * 2,
+            (Math.random() - 0.5) * 260
+          );
+          mesh.scale.set(
+            1 + Math.random() * 2.5,
+            1,
+            1 + Math.random() * 2.5
+          );
+          cloudGroup.add(mesh);
+        }
+        this.cloudGroup = cloudGroup;
+        this.scene.add(this.cloudGroup);
+      }
+
+      update(dt, playerPos) {
+        this.timeOfDay = (this.timeOfDay + dt * 0.1 * this.daySpeed) % 24;
+
+        // Angle in radians (0h = midnight, 6h = sunrise, 12h = noon, 18h = sunset)
+        const angle = ((this.timeOfDay - 6) / 24) * Math.PI * 2;
+        const orbitRadius = 140;
+
+        const sunX = playerPos.x + Math.cos(angle) * orbitRadius;
+        const sunY = playerPos.y + Math.sin(angle) * orbitRadius;
+        const sunZ = playerPos.z + 20;
+
+        this.sunLight.position.set(sunX, sunY, sunZ);
+        this.sunMesh.position.set(sunX, sunY, sunZ);
+        this.sunMesh.lookAt(playerPos);
+
+        const moonX = playerPos.x - Math.cos(angle) * orbitRadius;
+        const moonY = playerPos.y - Math.sin(angle) * orbitRadius;
+        const moonZ = playerPos.z - 20;
+
+        this.moonMesh.position.set(moonX, moonY, moonZ);
+        this.moonMesh.lookAt(playerPos);
+
+        // Drift clouds
+        if (this.cloudGroup) {
+          this.cloudGroup.position.x = playerPos.x + (Date.now() * 0.003) % 200 - 100;
+          this.cloudGroup.position.z = playerPos.z;
+        }
+
+        // Sky Color & Light Intensity transition
+        const sunHeight = Math.sin(angle); // -1 to 1
+        let skyCol = new THREE.Color(0x78a7ff); // Day
+        let lightIntensity = 1.2;
+
+        if (sunHeight > 0.15) {
+          // Full Day
+          skyCol.setHex(0x78a7ff);
+          this.sunLight.color.setHex(0xfffaed);
+          lightIntensity = 1.15;
+          this.hemiLight.intensity = 0.65;
+        } else if (sunHeight > -0.15) {
+          // Sunrise / Sunset transition
+          const t = (sunHeight + 0.15) / 0.3;
+          skyCol.setHex(0xff7a40).lerp(new THREE.Color(0x78a7ff), t);
+          this.sunLight.color.setHex(0xff9f43);
+          lightIntensity = 0.7;
+          this.hemiLight.intensity = 0.45;
+        } else {
+          // Night
+          skyCol.setHex(0x0a0f24);
+          this.sunLight.color.setHex(0x576574);
+          lightIntensity = 0.25;
+          this.hemiLight.intensity = 0.2;
+        }
+
+        this.sunLight.intensity = lightIntensity;
+        this.scene.background = skyCol;
+        this.scene.fog.color.copy(skyCol);
+      }
+    }
+
+    // --- 9. INVENTORY & HOTBAR UI CONTROLLER ---
+    class InventoryManager {
+      constructor(onSelectCallback) {
+        this.onSelect = onSelectCallback;
+        this.slots = [
+          { id: BLOCKS.GRASS, count: 64 },
+          { id: BLOCKS.DIRT, count: 64 },
+          { id: BLOCKS.STONE, count: 64 },
+          { id: BLOCKS.COBBLESTONE, count: 64 },
+          { id: BLOCKS.WOOD, count: 64 },
+          { id: BLOCKS.LEAVES, count: 64 },
+          { id: BLOCKS.PLANKS, count: 64 },
+          { id: BLOCKS.SAND, count: 64 },
+          { id: BLOCKS.GLASS, count: 64 }
+        ];
+        this.activeIndex = 0;
+        this.initUI();
+      }
+
+      initUI() {
+        const hotbarEl = document.getElementById('hotbar');
+        hotbarEl.innerHTML = '';
+
+        this.slots.forEach((slot, index) => {
+          const div = document.createElement('div');
+          div.className = `hotbar-slot ${index === this.activeIndex ? 'active' : ''}`;
+          div.id = `slot-${index}`;
+
+          const keySpan = document.createElement('span');
+          keySpan.className = 'slot-key';
+          keySpan.textContent = `${index + 1}`;
+          div.appendChild(keySpan);
+
+          // Mini preview icon from def
+          const def = BLOCK_DEFS[slot.id];
+          const icon = document.createElement('canvas');
+          icon.width = 28;
+          icon.height = 28;
+          icon.className = 'slot-icon';
+          this.renderBlockIcon(icon, slot.id);
+          div.appendChild(icon);
+
+          const countSpan = document.createElement('span');
+          countSpan.className = 'slot-count';
+          countSpan.id = `slot-count-${index}`;
+          countSpan.textContent = slot.count;
+          div.appendChild(countSpan);
+
+          div.addEventListener('click', () => {
+            this.selectSlot(index);
+          });
+
+          hotbarEl.appendChild(div);
+        });
+
+        this.updateActiveLabel();
+        this.buildFullInventoryModal();
+      }
+
+      renderBlockIcon(canvas, blockId) {
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        // Simple isometric/flat block preview
+        let col = '#7a7a7a';
+        if (blockId === BLOCKS.GRASS) col = '#4ca636';
+        else if (blockId === BLOCKS.DIRT) col = '#865432';
+        else if (blockId === BLOCKS.WOOD) col = '#674d32';
+        else if (blockId === BLOCKS.LEAVES) col = '#2d6a22';
+        else if (blockId === BLOCKS.PLANKS) col = '#bc9862';
+        else if (blockId === BLOCKS.COBBLESTONE) col = '#555555';
+        else if (blockId === BLOCKS.BEDROCK) col = '#1c1c1c';
+        else if (blockId === BLOCKS.SAND) col = '#dcd092';
+        else if (blockId === BLOCKS.GLASS) col = 'rgba(215, 240, 255, 0.7)';
+        else if (blockId === BLOCKS.WATER) col = '#2980b9';
+        else if (blockId === BLOCKS.BRICK) col = '#9b3b29';
+        else if (blockId === BLOCKS.COAL_ORE) col = '#333333';
+        else if (blockId === BLOCKS.IRON_ORE) col = '#d0a786';
+        else if (blockId === BLOCKS.GOLD_ORE) col = '#f1c40f';
+        else if (blockId === BLOCKS.DIAMOND_ORE) col = '#00d2d3';
+        else if (blockId === BLOCKS.TNT) col = '#c0392b';
+        else if (blockId === BLOCKS.BOOKSHELF) col = '#bc9862';
+        else if (blockId === BLOCKS.GLOWSTONE) col = '#f39c12';
+
+        ctx.fillStyle = col;
+        ctx.fillRect(3, 3, 22, 22);
+        // Highlight & Shadow
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillRect(3, 3, 22, 4);
+        ctx.fillRect(3, 3, 4, 22);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(3, 21, 22, 4);
+        ctx.fillRect(21, 3, 4, 22);
+      }
+
+      selectSlot(index) {
+        if (index < 0 || index >= this.slots.length) return;
+        document.getElementById(`slot-${this.activeIndex}`).classList.remove('active');
+        this.activeIndex = index;
+        document.getElementById(`slot-${this.activeIndex}`).classList.add('active');
+        this.updateActiveLabel();
+        if (this.onSelect) this.onSelect(this.getActiveBlockId());
+      }
+
+      cycleSlot(dir) {
+        let next = (this.activeIndex + dir) % this.slots.length;
+        if (next < 0) next += this.slots.length;
+        this.selectSlot(next);
+      }
+
+      getActiveBlockId() {
+        return this.slots[this.activeIndex].id;
+      }
+
+      updateActiveLabel() {
+        const blockId = this.getActiveBlockId();
+        const def = BLOCK_DEFS[blockId];
+        document.getElementById('active-block-name').textContent = def ? def.name : '';
+      }
+
+      buildFullInventoryModal() {
+        const container = document.getElementById('inventory-items-container');
+        container.innerHTML = '';
+
+        for (let id = 1; id <= 19; id++) {
+          const def = BLOCK_DEFS[id];
+          if (!def) continue;
+
+          const item = document.createElement('div');
+          item.className = 'inventory-item';
+
+          const icon = document.createElement('canvas');
+          icon.width = 32;
+          icon.height = 32;
+          icon.className = 'inventory-item-icon';
+          this.renderBlockIcon(icon, id);
+          item.appendChild(icon);
+
+          const nameTag = document.createElement('div');
+          nameTag.className = 'inventory-item-name';
+          nameTag.textContent = def.name;
+          item.appendChild(nameTag);
+
+          item.addEventListener('click', () => {
+            // Put selected item into current hotbar slot
+            this.slots[this.activeIndex] = { id, count: 64 };
+            this.initUI();
+            this.selectSlot(this.activeIndex);
+            document.getElementById('inventory-modal').style.display = 'none';
+          });
+
+          container.appendChild(item);
+        }
+      }
+    }
+
+    // --- 10. MAIN GAME ORCHESTRATION ---
+    class GameApp {
+      constructor() {
+        this.container = document.getElementById('game-container');
+        this.canvas = document.getElementById('webgl-canvas');
+
+        // Three.js Core
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 180);
+
+        this.renderer = new THREE.WebGLRenderer({
+          canvas: this.canvas,
+          antialias: true,
+          powerPreference: 'high-performance'
+        });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Subsystems
+        this.audio = new AudioEngine();
+        this.atlas = createProceduralAtlas();
+        this.world = new VoxelWorld(this.scene, this.atlas);
+        this.player = new PlayerController(this.camera, this.world, this.audio);
+        this.interactions = new InteractionManager(this.scene, this.camera, this.world, this.player, this.audio);
+        this.heldItem = new HeldItemView(this.camera, this.atlas);
+        this.atmosphere = new SkyAtmosphere(this.scene, this.renderer);
+
+        this.inventory = new InventoryManager((blockId) => {
+          this.heldItem.setBlock(blockId);
+        });
+
+        this.clock = new THREE.Clock();
+        this.renderDistance = 3;
+        this.isPlaying = false;
+        this.isPointerLocked = false;
+
+        // UI elements
+        this.blocker = document.getElementById('blocker');
+        this.coordsText = document.getElementById('coords-text');
+        this.fpsBiomeText = document.getElementById('fps-biome-text');
+        this.targetInfo = document.getElementById('target-info');
+        this.modeBadge = document.getElementById('mode-badge');
+
+        this.fpsFrames = 0;
+        this.fpsLastTime = performance.now();
+        this.currentFPS = 60;
+
+        this.initControls();
+        this.initEventListeners();
+        this.onResize();
+
+        // Initial World Generation around spawn
+        this.world.updateAround(this.player.position.x, this.player.position.z, this.renderDistance);
+
+        // Start Loop
+        this.animate = this.animate.bind(this);
+        requestAnimationFrame(this.animate);
+      }
+
+      initControls() {
+        // Desktop Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+          if (!this.isPlaying) return;
+          switch (e.code) {
+            case 'KeyW': this.player.keys.forward = true; break;
+            case 'KeyS': this.player.keys.backward = true; break;
+            case 'KeyA': this.player.keys.left = true; break;
+            case 'KeyD': this.player.keys.right = true; break;
+            case 'Space': this.player.keys.jump = true; break;
+            case 'ShiftLeft':
+            case 'ShiftRight':
+              if (this.player.isFlying) this.player.keys.down = true;
+              else this.player.isSprinting = true;
+              break;
+            case 'KeyF':
+              this.toggleFlyMode();
+              break;
+            case 'KeyE':
+              this.toggleInventoryModal();
+              break;
+            case 'Digit1': this.inventory.selectSlot(0); break;
+            case 'Digit2': this.inventory.selectSlot(1); break;
+            case 'Digit3': this.inventory.selectSlot(2); break;
+            case 'Digit4': this.inventory.selectSlot(3); break;
+            case 'Digit5': this.inventory.selectSlot(4); break;
+            case 'Digit6': this.inventory.selectSlot(5); break;
+            case 'Digit7': this.inventory.selectSlot(6); break;
+            case 'Digit8': this.inventory.selectSlot(7); break;
+            case 'Digit9': this.inventory.selectSlot(8); break;
+          }
+        });
+
+        window.addEventListener('keyup', (e) => {
+          switch (e.code) {
+            case 'KeyW': this.player.keys.forward = false; break;
+            case 'KeyS': this.player.keys.backward = false; break;
+            case 'KeyA': this.player.keys.left = false; break;
+            case 'KeyD': this.player.keys.right = false; break;
+            case 'Space': this.player.keys.jump = false; break;
+            case 'ShiftLeft':
+            case 'ShiftRight':
+              this.player.keys.down = false;
+              this.player.isSprinting = false;
+              break;
+          }
+        });
+
+        // Mouse Wheel Slot cycling
+        window.addEventListener('wheel', (e) => {
+          if (!this.isPlaying) return;
+          const dir = e.deltaY > 0 ? 1 : -1;
+          this.inventory.cycleSlot(dir);
+        }, { passive: true });
+
+        // Desktop Mouse PointerLock
+        document.addEventListener('pointerlockchange', () => {
+          this.isPointerLocked = document.pointerLockElement === document.body;
+          if (!this.isPointerLocked && this.isPlaying) {
+            // Keep game active, player can click again
+          }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (this.isPointerLocked && this.isPlaying) {
+            this.player.rotate(e.movementX * 0.0024, e.movementY * 0.0024);
+          }
+        });
+
+        // Mouse Clicks (LMB = Break, RMB = Place)
+        window.addEventListener('mousedown', (e) => {
+          if (!this.isPlaying) return;
+          if (!this.isPointerLocked) {
+            document.body.requestPointerLock();
+            return;
+          }
+          if (e.button === 0) {
+            // Left click - Break
+            this.heldItem.triggerSwing();
+            this.interactions.breakTargetBlock();
+          } else if (e.button === 2) {
+            // Right click - Place
+            e.preventDefault();
+            this.heldItem.triggerSwing();
+            const blockId = this.inventory.getActiveBlockId();
+            this.interactions.placeBlock(blockId);
+          }
+        });
+
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Mobile Touch Virtual Joystick (Left Hand)
+        const joystickZone = document.getElementById('joystick-zone');
+        const joystickKnob = document.getElementById('joystick-knob');
+        let joyTouchId = null;
+        let joyCenter = { x: 0, y: 0 };
+
+        joystickZone.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          const touch = e.changedTouches[0];
+          joyTouchId = touch.identifier;
+          const rect = joystickZone.getBoundingClientRect();
+          joyCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+          this.updateJoystick(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        joystickZone.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === joyTouchId) {
+              this.updateJoystick(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+              break;
+            }
+          }
+        }, { passive: false });
+
+        const resetJoystick = (e) => {
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === joyTouchId) {
+              joyTouchId = null;
+              this.player.virtualJoystick = { x: 0, y: 0 };
+              joystickKnob.style.transform = 'translate(0px, 0px)';
+              break;
+            }
+          }
+        };
+        joystickZone.addEventListener('touchend', resetJoystick, { passive: false });
+        joystickZone.addEventListener('touchcancel', resetJoystick, { passive: false });
+
+        this.updateJoystick = (tx, ty) => {
+          const maxDist = 42;
+          const dx = tx - joyCenter.x;
+          const dy = ty - joyCenter.y;
+          const dist = Math.hypot(dx, dy);
+          const angle = Math.atan2(dy, dx);
+          const clampedDist = Math.min(dist, maxDist);
+
+          const kx = Math.cos(angle) * clampedDist;
+          const ky = Math.sin(angle) * clampedDist;
+
+          joystickKnob.style.transform = `translate(${kx}px, ${ky}px)`;
+          // Forward is -Y in screen space
+          this.player.virtualJoystick = {
+            x: kx / maxDist,
+            y: -ky / maxDist
+          };
+        };
+
+        // Mobile Drag Look Area (Right Side of Screen)
+        const lookZone = document.getElementById('look-touch-zone');
+        let lookTouchId = null;
+        let lastLookPos = { x: 0, y: 0 };
+
+        lookZone.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          const touch = e.changedTouches[0];
+          lookTouchId = touch.identifier;
+          lastLookPos = { x: touch.clientX, y: touch.clientY };
+        }, { passive: false });
+
+        lookZone.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === lookTouchId) {
+              const curX = e.changedTouches[i].clientX;
+              const curY = e.changedTouches[i].clientY;
+              const deltaX = (curX - lastLookPos.x) * 0.0045;
+              const deltaY = (curY - lastLookPos.y) * 0.0045;
+              this.player.rotate(deltaX, deltaY);
+              lastLookPos = { x: curX, y: curY };
+              break;
+            }
+          }
+        }, { passive: false });
+
+        const endLook = (e) => {
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === lookTouchId) {
+              lookTouchId = null;
+              break;
+            }
+          }
+        };
+        lookZone.addEventListener('touchend', endLook, { passive: false });
+        lookZone.addEventListener('touchcancel', endLook, { passive: false });
+
+        // Mobile Action Buttons
+        const btnBreak = document.getElementById('touch-btn-break');
+        btnBreak.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.heldItem.triggerSwing();
+          this.interactions.breakTargetBlock();
+        }, { passive: false });
+
+        const btnPlace = document.getElementById('touch-btn-place');
+        btnPlace.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.heldItem.triggerSwing();
+          const blockId = this.inventory.getActiveBlockId();
+          this.interactions.placeBlock(blockId);
+        }, { passive: false });
+
+        const btnJump = document.getElementById('touch-btn-jump');
+        btnJump.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.player.keys.jump = true;
+        }, { passive: false });
+        btnJump.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          this.player.keys.jump = false;
+        }, { passive: false });
+
+        const btnFly = document.getElementById('touch-btn-fly');
+        btnFly.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.toggleFlyMode();
+        }, { passive: false });
+
+        const btnSprint = document.getElementById('touch-btn-sprint');
+        btnSprint.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.player.isSprinting = !this.player.isSprinting;
+          btnSprint.style.borderColor = this.player.isSprinting ? '#2ed573' : 'rgba(255,255,255,0.35)';
+        }, { passive: false });
+
+        const btnInvTouch = document.getElementById('touch-btn-inv');
+        btnInvTouch.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.toggleInventoryModal();
+        }, { passive: false });
+      }
+
+      initEventListeners() {
+        // Start Game button
+        document.getElementById('btn-play').addEventListener('click', () => {
+          this.audio.init();
+          this.blocker.style.display = 'none';
+          this.isPlaying = true;
+          try {
+            document.body.requestPointerLock();
+          } catch (e) {}
+        });
+
+        // Top HUD buttons
+        document.getElementById('btn-sound').addEventListener('click', () => {
+          const isMuted = this.audio.toggleMute();
+          document.getElementById('btn-sound').textContent = isMuted ? '🔇' : '🔊';
+        });
+
+        document.getElementById('btn-time').addEventListener('click', () => {
+          // Fast advance time 6 hours
+          this.atmosphere.timeOfDay = (this.atmosphere.timeOfDay + 6) % 24;
+          const isNight = this.atmosphere.timeOfDay >= 18 || this.atmosphere.timeOfDay < 6;
+          document.getElementById('btn-time').textContent = isNight ? '🌙' : '☀️';
+        });
+
+        document.getElementById('btn-fullscreen').addEventListener('click', () => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        });
+
+        document.getElementById('btn-inventory-top').addEventListener('click', () => {
+          this.toggleInventoryModal();
+        });
+
+        document.getElementById('btn-settings').addEventListener('click', () => {
+          this.toggleSettingsModal();
+        });
+
+        // Modals close
+        document.getElementById('modal-close-inv').addEventListener('click', () => {
+          document.getElementById('inventory-modal').style.display = 'none';
+        });
+        document.getElementById('modal-close-settings').addEventListener('click', () => {
+          document.getElementById('settings-modal').style.display = 'none';
+        });
+
+        // Settings adjustments
+        const distSlider = document.getElementById('setting-render-dist');
+        distSlider.addEventListener('input', (e) => {
+          this.renderDistance = parseInt(e.target.value);
+          document.getElementById('val-render-dist').textContent = this.renderDistance;
+          this.world.updateAround(this.player.position.x, this.player.position.z, this.renderDistance);
+        });
+
+        const timeSlider = document.getElementById('setting-time');
+        timeSlider.addEventListener('input', (e) => {
+          this.atmosphere.timeOfDay = parseFloat(e.target.value);
+          const h = Math.floor(this.atmosphere.timeOfDay);
+          const m = Math.floor((this.atmosphere.timeOfDay % 1) * 60);
+          document.getElementById('val-time').textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        });
+
+        const speedSlider = document.getElementById('setting-day-speed');
+        speedSlider.addEventListener('input', (e) => {
+          this.atmosphere.daySpeed = parseFloat(e.target.value);
+          document.getElementById('val-day-speed').textContent = `${this.atmosphere.daySpeed}x`;
+        });
+
+        document.getElementById('btn-toggle-fly-setting').addEventListener('click', () => {
+          this.toggleFlyMode();
+        });
+
+        document.getElementById('btn-new-world').addEventListener('click', () => {
+          this.world.reset();
+          this.player.position.set(8, 36, 8);
+          this.player.velocity.set(0, 0, 0);
+          this.world.updateAround(this.player.position.x, this.player.position.z, this.renderDistance);
+          document.getElementById('settings-modal').style.display = 'none';
+        });
+
+        window.addEventListener('resize', () => this.onResize());
+      }
+
+      toggleFlyMode() {
+        this.player.isFlying = !this.player.isFlying;
+        this.modeBadge.textContent = this.player.isFlying ? 'Полет' : 'Выживание';
+        this.modeBadge.className = `badge-tag ${this.player.isFlying ? 'badge-creative' : 'badge-survival'}`;
+        document.getElementById('btn-toggle-fly-setting').textContent = this.player.isFlying ? 'Включен' : 'Выключен';
+      }
+
+      toggleInventoryModal() {
+        const modal = document.getElementById('inventory-modal');
+        const isHidden = modal.style.display === 'none' || !modal.style.display;
+        modal.style.display = isHidden ? 'flex' : 'none';
+        if (isHidden && document.pointerLockElement) {
+          document.exitPointerLock();
+        }
+      }
+
+      toggleSettingsModal() {
+        const modal = document.getElementById('settings-modal');
+        const isHidden = modal.style.display === 'none' || !modal.style.display;
+        modal.style.display = isHidden ? 'flex' : 'none';
+        if (isHidden && document.pointerLockElement) {
+          document.exitPointerLock();
+        }
+      }
+
+      onResize() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        this.camera.aspect = w / h;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(w, h);
+      }
+
+      animate() {
+        requestAnimationFrame(this.animate);
+
+        const dt = this.clock.getDelta();
+
+        if (this.isPlaying) {
+          // Physics & Controller
+          this.player.update(dt);
+
+          // Raycast for target block
+          const target = this.interactions.raycast();
+          if (target) {
+            const def = BLOCK_DEFS[target.blockId];
+            this.targetInfo.style.opacity = '1';
+            this.targetInfo.textContent = `Блок: ${def ? def.name : 'Unknown'} [X:${target.hit[0]}, Y:${target.hit[1]}, Z:${target.hit[2]}]`;
+          } else {
+            this.targetInfo.style.opacity = '0';
+          }
+
+          // Particles
+          this.interactions.updateParticles(dt);
+
+          // Hand animation
+          const isMoving = this.player.velocity.lengthSq() > 0.1;
+          this.heldItem.update(dt, isMoving);
+
+          // Dynamic chunk streaming
+          this.world.updateAround(this.player.position.x, this.player.position.z, this.renderDistance);
+
+          // Atmosphere & Sun/Moon
+          this.atmosphere.update(dt, this.player.position);
+
+          // Update HUD Coordinates & FPS
+          this.updateHUDStats();
+        }
+
+        this.renderer.render(this.scene, this.camera);
+      }
+
+      updateHUDStats() {
+        this.fpsFrames++;
+        const now = performance.now();
+        if (now - this.fpsLastTime >= 500) {
+          this.currentFPS = Math.round((this.fpsFrames * 1000) / (now - this.fpsLastTime));
+          this.fpsFrames = 0;
+          this.fpsLastTime = now;
+
+          const px = this.player.position.x.toFixed(1);
+          const py = this.player.position.y.toFixed(1);
+          const pz = this.player.position.z.toFixed(1);
+          this.coordsText.textContent = `XYZ: ${px}, ${py}, ${pz}`;
+
+          const chunkCount = this.world.chunks.size;
+          this.fpsBiomeText.textContent = `FPS: ${this.currentFPS} | Биом: Равнины | Чанки: ${chunkCount}`;
+        }
+      }
+    }
+
+    // Launch Application when DOM is ready
+    window.addEventListener('DOMContentLoaded', () => {
+      window.voxelGame = new GameApp();
+    });
+  </script>
+</body>
+</html>
